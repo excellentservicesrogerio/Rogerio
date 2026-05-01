@@ -894,7 +894,17 @@
             const pass = document.getElementById('loginPass').value;
 
             if (user.toUpperCase() === 'DESENVOLVEDOR' && pass === '1709') { 
-                loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor');
+                // Ajuste Cirúrgico: Faz com que o desenvolvedor leia as próprias fotos salvas no DB!
+                database.ref('users/DESENVOLVEDOR').once('value').then((snap) => {
+                    if (snap.exists()) {
+                        const d = snap.val();
+                        loginSuccess('DESENVOLVEDOR', d.nome || 'Marcos Valério (Dev)', 'desenvolvedor', d.avatarUrl, d.coverUrl);
+                    } else {
+                        loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor');
+                    }
+                }).catch(() => {
+                    loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor');
+                });
             } else {
                 database.ref('users/' + user).once('value').then((snapshot) => {
                     if (snapshot.exists()) {
@@ -965,15 +975,21 @@
                     if(data.status === 'Ativo') statusClass = 'status-ativo';
                     if(data.status === 'Inativo') statusClass = 'status-inativo';
 
+                    let typeHtml = `<select onchange="updateUserType('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;">
+                        <option value="comum" ${data.tipo === 'comum' ? 'selected' : ''}>Comum</option>
+                        <option value="admin" ${data.tipo === 'admin' ? 'selected' : ''}>Admin</option>
+                    </select>`;
+
                     let actionsHtml = `<select onchange="updateUserStatus('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;"><option value="Pendente" ${data.status === 'Pendente' ? 'selected' : ''}>Pendente</option><option value="Ativo" ${data.status === 'Ativo' ? 'selected' : ''}>Ativo</option><option value="Inativo" ${data.status === 'Inativo' ? 'selected' : ''}>Inativo</option></select>`;
                     if (loggedUserType === 'desenvolvedor') { actionsHtml += `<button onclick="forcePasswordChange('${userKey}')" style="background:var(--red-vivid); color:#fff; border:none; padding:4px; border-radius:4px; cursor:pointer; margin-left:5px; font-size:10px;">Senha</button>`; }
 
-                    tbody.innerHTML += `<tr><td>${data.nome}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${data.tipo.toUpperCase()}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${data.nome}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
                 });
             });
         }
 
         function updateUserStatus(userKey, newStatus) { database.ref('users/' + userKey).update({ status: newStatus }).then(() => { loadAccessTable(); }); }
+        function updateUserType(userKey, newType) { database.ref('users/' + userKey).update({ tipo: newType }).then(() => { showCustomAlert("Tipo de usuário atualizado!", "Sucesso"); loadAccessTable(); }); }
         function forcePasswordChange(userKey) { const newPass = prompt("Digite a nova senha para o usuário " + userKey + ":"); if (newPass) { database.ref('users/' + userKey).update({ senha: newPass }).then(() => { showCustomAlert("Senha alterada com sucesso!", "Gestão de Acessos"); }); } }
 
         // --- FULLSCREEN ---
@@ -1089,31 +1105,38 @@
             const senhaAtual = document.getElementById('profCurrentPass').value;
             const novaSenha = document.getElementById('profNewPass').value;
 
-            // Update UI Imediatamente
-            if(pendingAvatarDataUrl) document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
-            loggedUserName = novoNome;
-            
-            if(loggedUser) {
-                try {
+            try {
+                if(loggedUser) {
                     let updates = { nome: novoNome };
 
-                    // Firebase Storage Upload
+                    // Ajuste Cirúrgico: Atualiza a interface IMEDIATAMENTE e adiciona fallback robusto para contornar qualquer erro do Storage
                     if (pendingAvatarDataUrl) {
-                        const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
-                        await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
-                        updates.avatarUrl = await avatarRef.getDownloadURL();
+                        document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl; // Atualiza a lateral na hora!
+                        try {
+                            const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
+                            await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
+                            updates.avatarUrl = await avatarRef.getDownloadURL();
+                        } catch(err) {
+                            updates.avatarUrl = pendingAvatarDataUrl; // Salva o base64 direto no DB se o upload falhar
+                        }
                     }
                     if (pendingCoverDataUrl) {
-                        const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
-                        await coverRef.putString(pendingCoverDataUrl, 'data_url');
-                        updates.coverUrl = await coverRef.getDownloadURL();
+                        document.getElementById('coverPreview').src = pendingCoverDataUrl; // Atualiza o preview de imediato
+                        try {
+                            const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
+                            await coverRef.putString(pendingCoverDataUrl, 'data_url');
+                            updates.coverUrl = await coverRef.getDownloadURL();
+                        } catch(err) {
+                            updates.coverUrl = pendingCoverDataUrl; // Salva o base64 direto no DB se o upload falhar
+                        }
                     }
 
                     // Se preencheu as senhas, validar antes de salvar
                     if(senhaAtual || novaSenha) {
                         const snapshot = await database.ref('users/' + loggedUser).once('value');
-                        const dbPass = snapshot.val().senha;
-                        if(senhaAtual !== dbPass) {
+                        const val = snapshot.val();
+                        
+                        if(loggedUser !== 'DESENVOLVEDOR' && (!val || senhaAtual !== val.senha)) {
                             showCustomAlert('A senha atual informada está incorreta.', 'Erro');
                             throw new Error('Senha incorreta');
                         }
@@ -1121,17 +1144,19 @@
                     }
 
                     await database.ref('users/' + loggedUser).update(updates);
+                    loggedUserName = novoNome;
+                    
                     showCustomAlert('Perfil salvo com sucesso!', 'Sucesso');
+                    closeModal(); // Agora fechará de forma garantida!
+                } else {
                     closeModal();
-
-                } catch (error) {
-                    console.error(error);
-                } finally {
-                    btnSave.innerText = "Salvar Perfil";
-                    btnSave.disabled = false;
                 }
-            } else {
-                closeModal();
+            } catch (error) {
+                console.error(error);
+                if(error.message !== 'Senha incorreta'){
+                    showCustomAlert('Ocorreu um erro ao salvar o perfil.', 'Erro');
+                }
+            } finally {
                 btnSave.innerText = "Salvar Perfil";
                 btnSave.disabled = false;
             }
