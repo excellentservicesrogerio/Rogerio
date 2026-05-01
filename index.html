@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Matriz - High Performance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --red-vivid: #e6193b;
+            --red-dark: #6e0012;
+            --matte-black: #121212;
+            --bg-panel: #0a0a0a;
+            --text-main: #f3f3f3;
+            --text-muted: #888888;
+            --border-subtle: rgba(255, 255, 255, 0.05);
+            --shadow-heavy: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body { display: flex; height: 100vh; width: 100vw; background-color: var(--bg-panel); color: var(--text-main); overflow: hidden; }
+
+        @keyframes elegantPulse {
+            0% { background-position: 0% 50%; opacity: 0.9; }
+            50% { background-position: 100% 50%; opacity: 1; }
+            100% { background-position: 0% 50%; opacity: 0.9; }
+        }
+
+        /* TELA DE LOGIN E REGISTRO */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--matte-black);
+            display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease;
+        }
+
+        .login-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transition: height 0.3s; }
+        .login-wrapper::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, var(--red-dark), var(--red-vivid), var(--red-dark));
+            background-size: 200% 200%; animation: elegantPulse 6s ease infinite; border-radius: 18px; z-index: -1;
+        }
+
+        .login-card { background-color: var(--bg-panel); padding: 40px; border-radius: 16px; text-align: center; height: 100%; width: 100%; }
+        .login-card h2 { margin-bottom: 5px; font-weight: 700; letter-spacing: -1px; }
+        .login-card p { color: var(--text-muted); font-size: 13px; margin-bottom: 25px; }
+
+        .auth-switch { color: var(--text-muted); font-size: 12px; margin-top: 20px; cursor: pointer; transition: color 0.3s; }
+        .auth-switch:hover { color: var(--red-vivid); text-decoration: underline; }
+
+        /* SIDEBAR E FORMULÁRIOS */
+        .sidebar-nav {
+            width: 120px; background: linear-gradient(180deg, #170005 0%, var(--red-dark) 50%, #0a0002 100%); background-size: 200% 200%;
+            animation: elegantPulse 8s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; padding: 30px 0; z-index: 3;
+            border-right: 1px solid rgba(230, 25, 59, 0.2); box-shadow: 5px 0 20px rgba(0,0,0,0.5); overflow-y: auto;
+        }
+        .sidebar-nav::-webkit-scrollbar { display: none; }
+
+        .nav-profile {
+            width: 65px; height: 65px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); margin-bottom: 30px;
+            cursor: pointer; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: transform 0.3s ease, border-color 0.3s ease; background-color: #222;
+        }
+        .nav-profile:hover { transform: scale(1.05); border-color: #fff; }
+        .nav-profile img { width: 100%; height: 100%; object-fit: cover; }
+
+        .nav-item {
+            width: 100%; padding: 15px 0; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.5); cursor: pointer; transition: all 0.3s ease; position: relative;
+        }
+        .nav-item:hover, .nav-item.active { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background-color: #fff; }
+
+        .nav-item-special { margin-top: auto; margin-bottom: 10px; width: 85%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); color: rgba(255, 255, 255, 0.8); }
+        .nav-item-special:hover { background-color: rgba(0, 0, 0, 0.7); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+
+        .sidebar-form { width: 400px; background-color: var(--matte-black); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; z-index: 2; }
+        .form-header { padding: 30px 25px 15px 25px; }
+        .form-scroll-area { flex: 1; overflow-y: auto; padding: 0 25px 30px 25px; }
+        .form-scroll-area::-webkit-scrollbar { width: 4px; }
+        .form-scroll-area::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); font-weight: 700; margin-bottom: 20px; display: block; border-left: 3px solid var(--red-vivid); padding-left: 10px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-group { margin-bottom: 5px; text-align: left; }
+        .full-width { grid-column: span 2; }
+        .form-group label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }
+        .form-input, .form-select { width: 100%; background-color: #0f0f0f; border: 1px solid #2a2a2a; color: var(--text-main); padding: 9px 12px; border-radius: 6px; font-size: 12px; outline: none; transition: border-color 0.2s; }
+        .form-input:focus, .form-select:focus { border-color: var(--red-vivid); }
+
+        .btn-submit { width: 100%; background: linear-gradient(135deg, var(--red-vivid), var(--red-dark)); color: #fff; border: none; padding: 15px; border-radius: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; cursor: pointer; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; }
+        .btn-submit:hover { opacity: 0.9; }
+
+        .divider-title { color: var(--red-vivid); font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; grid-column: span 2; }
+
+        /* AREA PRINCIPAL E TABELAS */
+        .main-panel { flex: 1; padding: 40px; overflow: hidden; display: flex; flex-direction: column; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 15px;}
+        
+        .header-actions { display: flex; gap: 10px; }
+        
+        .control-btn { background: none; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px 12px; font-size: 12px; font-weight: 600; gap: 6px; transition: all 0.3s ease; outline: none; background-color: #1a1a1a;}
+        .control-btn:hover { background-color: #2a2a2a; border-color: rgba(255,255,255,0.3); }
+        .control-btn.pdf:hover { background-color: #6e0012; border-color: var(--red-vivid); }
+        .control-btn.excel:hover { background-color: #0b5e28; border-color: #1db954; }
+        .control-btn svg { width: 18px; height: 18px; }
+
+        .gear-btn { background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 8px; transition: color 0.3s ease; outline: none; }
+        .gear-btn svg { width: 26px; height: 26px; transition: transform 0.3s ease; }
+        .gear-btn.active { color: var(--red-vivid); }
+        .gear-btn:hover svg { animation: spin 2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .table-container { flex: 1; background-color: var(--matte-black); border-radius: 12px; border: 1px solid var(--border-subtle); margin-top: 20px; overflow: auto; }
+        .table-container::-webkit-scrollbar { height: 8px; width: 8px; }
+        .table-container::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+        .data-table th { position: sticky; top: 0; background-color: #1a1a1a; color: var(--text-muted); text-align: center; padding: 12px 15px; font-weight: 600; text-transform: uppercase; border-bottom: 2px solid #000; z-index: 10; border-right: 1px solid #222; }
+        .calc-header { color: var(--red-vivid) !important; font-weight: 700 !important; }
+        .data-table td { padding: 10px 15px; border-bottom: 1px solid rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.02); color: #ccc; transition: all 0.2s ease; text-align: center; }
+        .data-table tr:hover td { background-color: rgba(255,255,255,0.05); color: #fff; }
+        
+        .action-col { display: none; }
+        .edit-mode .action-col { display: table-cell; }
+        .edit-mode td:not(.action-col) { cursor: text; background-color: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1); }
+        .edit-mode td:not(.action-col):focus { outline: 2px solid var(--red-vivid); background-color: #1a1a1a; color: #fff; }
+
+        .btn-delete { background-color: #333; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
+        .btn-delete:hover { background-color: #ff4d4d; color: #fff; }
+
+        /* MODAIS CUSTOMIZADOS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 10000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+
+        .profile-modal-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 420px; box-shadow: 0 25px 60px rgba(0,0,0,0.8); }
+        .profile-modal-wrapper.large { width: 700px; }
+        .profile-modal-wrapper::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--red-dark), var(--red-vivid), var(--red-dark)); background-size: 200% 200%; animation: elegantPulse 4s ease infinite; border-radius: 18px; z-index: -1; }
+        .profile-modal-content { background-color: var(--bg-panel); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
+        
+        .modal-header-custom { padding: 20px; text-align: center; border-bottom: 1px solid var(--border-subtle); }
+        .modal-header-custom h3 { color: #fff; font-size: 18px; }
+
+        .modal-cover { width: 100%; height: 130px; background-color: #333; position: relative; cursor: pointer; }
+        .modal-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-avatar-area { position: relative; height: 50px; }
+        .modal-avatar-wrapper { position: absolute; bottom: -10px; left: 25px; width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--bg-panel); cursor: pointer; overflow: hidden; z-index: 2; background: #222; }
+        .modal-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; background-color: #f3f3f3;}
+        .modal-body { padding: 20px 25px 30px 25px; overflow-y: auto;}
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #2a2a2a; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; font-size: 13px;}
+        .btn-cancel:hover { background: #3a3a3a; }
+        
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .status-pendente { background: #b8860b; color: #fff; }
+        .status-ativo { background: #1db954; color: #fff; }
+        .status-inativo { background: #e6193b; color: #fff; }
+
+        /* MODO DE EXPORTAÇÃO PDF PROFISSIONAL (Elegante e Colorido) */
+        .pdf-header { display: none; }
+        
+        .pdf-export-mode {
+            background-color: #ffffff !important;
+            padding: 20px !important;
+            border: none !important;
+            overflow: visible !important;
+        }
+        .pdf-export-mode .action-col { display: none !important; }
+        
+        .pdf-export-mode .data-table {
+            border-collapse: collapse !important;
+            border: 1px solid #ddd !important;
+            color: #000 !important;
+            font-size: 9px !important; /* Fonte ajustada para A2 */
+            width: 100% !important;
+            font-family: Arial, sans-serif !important;
+        }
+        
+        .pdf-export-mode .data-table th {
+            background-color: var(--red-vivid) !important;
+            color: #ffffff !important;
+            border: 1px solid #b3122c !important;
+            padding: 8px !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+        }
+        
+        .pdf-export-mode .data-table td {
+            background-color: #ffffff !important;
+            color: #333333 !important;
+            border: 1px solid #e0e0e0 !important;
+            padding: 6px !important;
+            text-align: center !important;
+        }
+
+        .pdf-export-mode .data-table tr:nth-child(even) td {
+            background-color: #f9f9f9 !important;
+        }
+        
+        .pdf-export-mode .pdf-header {
+            display: block !important;
+            text-align: left !important;
+            margin-bottom: 20px !important;
+            padding-bottom: 10px !important;
+            border-bottom: 2px solid var(--red-vivid) !important;
+            color: #000 !important;
+            font-family: Arial, sans-serif !important;
+        }
+        .pdf-export-mode .pdf-header h2 { font-size: 22px !important; margin-bottom: 5px !important; color: var(--red-dark) !important; }
+        .pdf-export-mode .pdf-header p { font-size: 12px !important; color: #555 !important; }
+
+        /* DASHBOARD CHARTS */
+        .chart-card { background: #161616; padding: 20px; border-radius: 12px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; align-items: center;}
+        .chart-card h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; color: var(--text-muted); width: 100%; text-align: left;}
+
+    </style>
+</head>
+<body>
+
+    <div id="customAlertBox" class="modal-overlay">
+        <div class="profile-modal-wrapper" style="width: 320px;">
+            <div class="profile-modal-content">
+                <div class="modal-header-custom" style="border-bottom: 2px solid var(--red-vivid);">
+                    <h3 id="alertTitle">Notificação</h3>
+                </div>
+                <div class="modal-body" style="text-align: center;">
+                    <p id="alertMessage" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px; line-height: 1.5;"></p>
+                    <button onclick="closeCustomAlert()" class="btn-submit" style="margin-top: 0;">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-screen">
+        <div class="login-wrapper" id="loginWrapper">
+            <div class="login-card" id="formLoginContainer">
+                <h2>Login</h2>
+                <p>Acesso Restrito - Matriz</p>
+                <form id="loginForm" class="form-grid" style="display: flex; flex-direction: column;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <input type="text" id="loginUser" class="form-input" placeholder="Usuário" autocomplete="off" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="loginPass" class="form-input" placeholder="Senha" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Entrar no Sistema</button>
+                    <div class="auth-switch" onclick="toggleAuthMode()">Não tem conta? Solicite Acesso</div>
+                </form>
+            </div>
+            
+            <div class="login-card" id="formRegisterContainer" style="display: none;">
+                <h2>Cadastro</h2>
+                <p>Solicitar Acesso ao Sistema</p>
+                <form id="registerForm" class="form-grid" style="display: flex; flex-direction: column;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <input type="text" id="regNome" class="form-input" placeholder="Nome Completo" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <input type="text" id="regUser" class="form-input" placeholder="Usuário Desejado" autocomplete="off" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <input type="password" id="regPass" class="form-input" placeholder="Senha" required>
+                    </div>
+                    <div class="form-group">
+                        <select id="regType" class="form-select">
+                            <option value="comum">Usuário Comum</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit">Solicitar</button>
+                    <div class="auth-switch" onclick="toggleAuthMode()">Já tem conta? Fazer Login</div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="profileModal" class="modal-overlay">
+        <div class="profile-modal-wrapper">
+            <div class="profile-modal-content">
+                <div class="modal-cover" onclick="document.getElementById('coverInput').click()">
+                    <img id="coverPreview" src="https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1000&auto=format&fit=crop" alt="Capa">
+                    <input type="file" id="coverInput" hidden accept="image/*">
+                </div>
+                <div class="modal-avatar-area">
+                    <div class="modal-avatar-wrapper" onclick="document.getElementById('avatarInput').click()">
+                        <img id="avatarPreview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="Perfil">
+                        <input type="file" id="avatarInput" hidden accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-body form-grid">
+                    <div class="form-group full-width" style="margin-bottom: 5px;">
+                        <label>Nome Completo</label>
+                        <input type="text" id="profName" class="form-input">
+                    </div>
+                    <div class="form-group full-width" style="margin-bottom: 5px;">
+                        <label>Usuário de Acesso</label>
+                        <input type="text" id="profUser" class="form-input">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="color: var(--red-vivid);">Senha Atual (P/ Confirmar)</label>
+                        <input type="password" id="profCurrentPass" class="form-input" placeholder="Obrigatório">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Nova Senha (Opcional)</label>
+                        <input type="password" id="profNewPass" class="form-input" placeholder="Deixe em branco p/ manter">
+                    </div>
+                    <div class="full-width modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                        <button type="button" class="btn-submit" id="btnSaveProfile" style="margin-top: 0;" onclick="saveProfile()">Salvar Perfil</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="accessModal" class="modal-overlay">
+        <div class="profile-modal-wrapper large">
+            <div class="profile-modal-content">
+                <div class="modal-header-custom">
+                    <h3>Gestão de Acessos</h3>
+                </div>
+                <div class="modal-body" style="padding: 0;">
+                    <table class="data-table" id="accessTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th><th>Usuário</th><th>Tipo</th><th>Status</th><th class="action-col" style="display:table-cell">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accessTableBody">
+                            </tbody>
+                    </table>
+                </div>
+                <div class="modal-body" style="border-top: 1px solid #222; background: #111;">
+                    <div class="full-width" style="display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn-cancel" onclick="closeAccessModal()" style="width: 150px;">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav">
+        <div class="nav-profile" onclick="openModal()" title="Editar Perfil">
+            <img id="sidebarProfilePic" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" alt="Perfil">
+        </div>
+        <div class="nav-item" id="tab-dashboard">Dashboard</div>
+        <div class="nav-item active" id="tab-matriz">Matriz</div>
+        <div class="nav-item" id="tab-peso-femeas">Peso Fêmeas</div>
+        <div class="nav-item" id="tab-peso-machos">Peso Machos</div>
+        <div class="nav-item" id="tab-real-meta">Real x Meta</div>
+        <div class="nav-item nav-item-special" id="tab-padrao">Padrão</div>
+        
+        <div class="nav-item" id="btn-acessos" style="display: none; margin-top: 15px; color: var(--red-vivid);" onclick="openAccessModal()">Acessos</div>
+    </nav>
+
+    <aside class="sidebar-form">
+        <div id="view-form-dashboard" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Filtros Dashboard</h2><p style="font-size:10px; color:var(--text-muted); margin-top:-15px; margin-bottom:15px; margin-left:15px;">Módulo Peso Machos</p></div>
+            <div class="form-scroll-area">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Granja</label>
+                        <select id="dashFilterGranja" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todas Granjas</option></select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Lote</label>
+                        <select id="dashFilterLote" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Lotes</option></select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Aviário</label>
+                        <select id="dashFilterAviario" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Aviários</option></select>
+                    </div>
+                    <button class="btn-submit full-width" onclick="updateDashboardPesoMachos()" style="margin-top:10px;">Atualizar Gráficos</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-form-matriz" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Matriz</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroMatrizForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>Data</label><input type="date" id="c_data" class="form-input" required></div>
+                    <div class="form-group"><label>Lote</label><input type="text" id="c_lote" class="form-input"></div>
+                    <div class="form-group"><label>Semana</label><input type="number" id="c_semana" class="form-input"></div>
+                    <div class="form-group full-width"><label>Aviário</label><input type="text" id="c_aviario" class="form-input"></div>
+                    
+                    <div class="divider-title">Produção e Tipos</div>
+                    <div class="form-group full-width"><label>Produção Total</label><input type="number" id="c_producao" class="form-input"></div>
+                    <div class="form-group"><label>Quebrados</label><input type="number" id="c_quebrados" class="form-input"></div>
+                    <div class="form-group"><label>Trincados</label><input type="number" id="c_trincados" class="form-input"></div>
+                    <div class="form-group"><label>Deformados</label><input type="number" id="c_deformados" class="form-input"></div>
+                    <div class="form-group"><label>Duas Gemas</label><input type="number" id="c_duasgemas" class="form-input"></div>
+                    <div class="form-group"><label>Pequenos</label><input type="number" id="c_pequenos" class="form-input"></div>
+                    <div class="form-group"><label>Sujos de Cama</label><input type="number" id="c_sujoscama" class="form-input"></div>
+                    <div class="form-group"><label>Sujos de Ninho</label><input type="number" id="c_sujosninho" class="form-input"></div>
+                    <div class="form-group"><label>Sujos Descartes</label><input type="number" id="c_sujosdescartes" class="form-input"></div>
+                    <div class="form-group"><label>Ovos Comercio</label><input type="number" id="c_ovoscomercio" class="form-input"></div>
+                    <div class="form-group"><label>Ovos Limpos</label><input type="number" id="c_ovoslimpos" class="form-input"></div>
+                    <div class="form-group full-width"><label>Ovos Para Incubatório</label><input type="number" id="c_ovosincubatorio" class="form-input"></div>
+
+                    <div class="divider-title">Controle Fêmeas (Fileira 1)</div>
+                    <div class="form-group"><label>BOX 1</label><input type="number" id="f_b1" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q1" class="form-input"></div>
+                    <div class="form-group"><label>BOX 2</label><input type="number" id="f_b2" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q2" class="form-input"></div>
+                    <div class="form-group"><label>BOX 3</label><input type="number" id="f_b3" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q3" class="form-input"></div>
+                    <div class="form-group"><label>BOX 4</label><input type="number" id="f_b4" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q4" class="form-input"></div>
+                    <div class="form-group"><label>BOX 5</label><input type="number" id="f_b5" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q5" class="form-input"></div>
+                    <div class="form-group"><label>BOX 6</label><input type="number" id="f_b6" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q6" class="form-input"></div>
+                    <div class="form-group"><label>BOX 7</label><input type="number" id="f_b7" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q7" class="form-input"></div>
+                    <div class="form-group"><label>BOX 8</label><input type="number" id="f_b8" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="f_q8" class="form-input"></div>
+
+                    <div class="divider-title">Controle Machos (Fileira 2)</div>
+                    <div class="form-group"><label>BOX 1</label><input type="number" id="m_b1" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q1" class="form-input"></div>
+                    <div class="form-group"><label>BOX 2</label><input type="number" id="m_b2" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q2" class="form-input"></div>
+                    <div class="form-group"><label>BOX 3</label><input type="number" id="m_b3" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q3" class="form-input"></div>
+                    <div class="form-group"><label>BOX 4</label><input type="number" id="m_b4" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q4" class="form-input"></div>
+                    <div class="form-group"><label>BOX 5</label><input type="number" id="m_b5" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q5" class="form-input"></div>
+                    <div class="form-group"><label>BOX 6</label><input type="number" id="m_b6" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q6" class="form-input"></div>
+                    <div class="form-group"><label>BOX 7</label><input type="number" id="m_b7" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q7" class="form-input"></div>
+                    <div class="form-group"><label>BOX 8</label><input type="number" id="m_b8" class="form-input"></div><div class="form-group"><label>Qtd</label><input type="number" id="m_q8" class="form-input"></div>
+
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-form-peso-femeas" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Peso Fêmeas</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroPesoFemeasForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>Data de Fechamento</label><input type="date" id="pf_data" class="form-input" required></div>
+                    <div class="form-group full-width"><label>Granja</label><input type="text" id="pf_granja" class="form-input"></div>
+                    <div class="form-group"><label>Lote</label><input type="text" id="pf_lote" class="form-input"></div>
+                    <div class="form-group"><label>Semana</label><input type="number" id="pf_semana" class="form-input"></div>
+                    <div class="form-group full-width"><label>Aviário</label><input type="text" id="pf_aviario" class="form-input"></div>
+                    
+                    <div class="divider-title">Pesos e Uniformidades</div>
+                    <div class="form-group"><label>1</label><input type="number" step="0.01" id="pf_p1" class="form-input"></div><div class="form-group"><label>Unif 1</label><input type="number" step="0.01" id="pf_u1" class="form-input"></div>
+                    <div class="form-group"><label>2</label><input type="number" step="0.01" id="pf_p2" class="form-input"></div><div class="form-group"><label>Unif 2</label><input type="number" step="0.01" id="pf_u2" class="form-input"></div>
+                    <div class="form-group"><label>3</label><input type="number" step="0.01" id="pf_p3" class="form-input"></div><div class="form-group"><label>Unif 3</label><input type="number" step="0.01" id="pf_u3" class="form-input"></div>
+                    <div class="form-group"><label>4</label><input type="number" step="0.01" id="pf_p4" class="form-input"></div><div class="form-group"><label>Unif 4</label><input type="number" step="0.01" id="pf_u4" class="form-input"></div>
+                    <div class="form-group"><label>5</label><input type="number" step="0.01" id="pf_p5" class="form-input"></div><div class="form-group"><label>Unif 5</label><input type="number" step="0.01" id="pf_u5" class="form-input"></div>
+                    <div class="form-group"><label>6</label><input type="number" step="0.01" id="pf_p6" class="form-input"></div><div class="form-group"><label>Unif 6</label><input type="number" step="0.01" id="pf_u6" class="form-input"></div>
+                    <div class="form-group"><label>7</label><input type="number" step="0.01" id="pf_p7" class="form-input"></div><div class="form-group"><label>Unif 7</label><input type="number" step="0.01" id="pf_u7" class="form-input"></div>
+                    <div class="form-group"><label>8</label><input type="number" step="0.01" id="pf_p8" class="form-input"></div><div class="form-group"><label>Unif 8</label><input type="number" step="0.01" id="pf_u8" class="form-input"></div>
+
+                    <div class="divider-title">Indicadores</div>
+                    <div class="form-group full-width"><label>GAD REAL</label><input type="number" step="0.01" id="pf_gad_real" class="form-input"></div>
+                    <div class="form-group"><label>Meta</label><input type="number" step="0.01" id="pf_meta" class="form-input"></div>
+                    <div class="form-group"><label>Real</label><input type="number" step="0.01" id="pf_real" class="form-input"></div>
+                    <div class="form-group"><label>M. Meta</label><input type="number" step="0.01" id="pf_m_meta" class="form-input"></div>
+                    <div class="form-group"><label>M. Real</label><input type="number" step="0.01" id="pf_m_real" class="form-input"></div>
+
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-form-peso-machos" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Peso Machos</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroPesoMachosForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>Data de Fechamento</label><input type="date" id="pm_data" class="form-input" required></div>
+                    <div class="form-group full-width"><label>Granja</label><input type="text" id="pm_granja" class="form-input"></div>
+                    <div class="form-group"><label>Lote</label><input type="text" id="pm_lote" class="form-input"></div>
+                    <div class="form-group"><label>Sem.</label><input type="number" id="pm_semana" class="form-input"></div>
+                    <div class="form-group full-width"><label>Aviário</label><input type="text" id="pm_aviario" class="form-input"></div>
+                    <div class="form-group"><label>Peso Médio</label><input type="number" step="0.01" id="pm_peso_medio" class="form-input"></div>
+                    <div class="form-group"><label>UNI</label><input type="number" step="0.01" id="pm_uni" class="form-input"></div>
+
+                    <div class="divider-title">LEVE</div>
+                    <div class="form-group"><label>Box 1</label><input type="number" step="0.01" id="pm_b1" class="form-input"></div><div class="form-group"><label>CV leve 1</label><input type="number" step="0.01" id="pm_cv1" class="form-input"></div><div class="form-group"><label>Unif. Leve 1</label><input type="number" step="0.01" id="pm_u1" class="form-input"></div><div class="form-group"><label>GAD leve</label><input type="number" step="0.01" id="pm_g1" class="form-input"></div>
+                    <div class="form-group"><label>Box 2</label><input type="number" step="0.01" id="pm_b2" class="form-input"></div><div class="form-group"><label>CV leve 2</label><input type="number" step="0.01" id="pm_cv2" class="form-input"></div><div class="form-group"><label>Unif. leve 2</label><input type="number" step="0.01" id="pm_u2" class="form-input"></div><div class="form-group"><label>GAD leve 2</label><input type="number" step="0.01" id="pm_g2" class="form-input"></div>
+
+                    <div class="divider-title">PESADO</div>
+                    <div class="form-group"><label>Box 3</label><input type="number" step="0.01" id="pm_b3" class="form-input"></div><div class="form-group"><label>CV Pesado</label><input type="number" step="0.01" id="pm_cv3" class="form-input"></div><div class="form-group"><label>Unif. Pesado</label><input type="number" step="0.01" id="pm_u3" class="form-input"></div><div class="form-group"><label>GAD Pesado</label><input type="number" step="0.01" id="pm_g3" class="form-input"></div>
+                    <div class="form-group"><label>Box 4</label><input type="number" step="0.01" id="pm_b4" class="form-input"></div><div class="form-group"><label>CV Pesado 2</label><input type="number" step="0.01" id="pm_cv4" class="form-input"></div><div class="form-group"><label>Unif. Pesado 2</label><input type="number" step="0.01" id="pm_u4" class="form-input"></div><div class="form-group"><label>GAD Pesado 2</label><input type="number" step="0.01" id="pm_g4" class="form-input"></div>
+
+                    <div class="divider-title">LEVE</div>
+                    <div class="form-group"><label>Box 5</label><input type="number" step="0.01" id="pm_b5" class="form-input"></div><div class="form-group"><label>CV. L</label><input type="number" step="0.01" id="pm_cv5" class="form-input"></div><div class="form-group"><label>Unif. L</label><input type="number" step="0.01" id="pm_u5" class="form-input"></div><div class="form-group"><label>GAD. L</label><input type="number" step="0.01" id="pm_g5" class="form-input"></div>
+                    <div class="form-group"><label>Box 6</label><input type="number" step="0.01" id="pm_b6" class="form-input"></div><div class="form-group"><label>CV. L2</label><input type="number" step="0.01" id="pm_cv6" class="form-input"></div><div class="form-group"><label>Unif. L2</label><input type="number" step="0.01" id="pm_u6" class="form-input"></div><div class="form-group"><label>GAD. L2</label><input type="number" step="0.01" id="pm_g6" class="form-input"></div>
+
+                    <div class="divider-title">PESADO</div>
+                    <div class="form-group"><label>Box 7</label><input type="number" step="0.01" id="pm_b7" class="form-input"></div><div class="form-group"><label>CV. P</label><input type="number" step="0.01" id="pm_cv7" class="form-input"></div><div class="form-group"><label>Unif. P</label><input type="number" step="0.01" id="pm_u7" class="form-input"></div><div class="form-group"><label>GAD. P</label><input type="number" step="0.01" id="pm_g7" class="form-input"></div>
+                    <div class="form-group"><label>Box 8</label><input type="number" step="0.01" id="pm_b8" class="form-input"></div><div class="form-group"><label>CV. P2</label><input type="number" step="0.01" id="pm_cv8" class="form-input"></div><div class="form-group"><label>Unif. P2</label><input type="number" step="0.01" id="pm_u8" class="form-input"></div><div class="form-group"><label>GAD. P2</label><input type="number" step="0.01" id="pm_g8" class="form-input"></div>
+
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-form-real-meta" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Real x Meta</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroRealMetaForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>Lote</label><input type="text" id="rm_lote" class="form-input" required></div>
+                    <div class="form-group"><label>Aviário</label><input type="text" id="rm_aviario" class="form-input" required></div>
+                    <div class="form-group"><label>Semana</label><input type="number" id="rm_semana" class="form-input" required></div>
+                    
+                    <div class="divider-title">Peso Ovo</div>
+                    <div class="form-group"><label>Meta</label><input type="number" step="0.01" id="rm_peso_meta" class="form-input"></div>
+                    <div class="form-group"><label>Real</label><input type="number" step="0.01" id="rm_peso_real" class="form-input"></div>
+                    
+                    <div class="divider-title">Aproveitamento</div>
+                    <div class="form-group"><label>Meta</label><input type="number" step="0.01" id="rm_aprov_meta" class="form-input"></div>
+                    <div class="form-group"><label>Real</label><input type="number" step="0.01" id="rm_aprov_real" class="form-input"></div>
+                    
+                    <div class="divider-title">Macho x Fêmea</div>
+                    <div class="form-group full-width"><label>Ideal</label><input type="number" step="0.01" id="rm_mxf_ideal" class="form-input"></div>
+                    <div class="form-group"><label>Máximo</label><input type="number" step="0.01" id="rm_mxf_maximo" class="form-input"></div>
+                    <div class="form-group"><label>Real</label><input type="number" step="0.01" id="rm_mxf_real" class="form-input"></div>
+
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-form-padrao" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Padrão</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroPadraoForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>Semana</label><input type="number" id="pd_semana" class="form-input" required></div>
+
+                    <div class="divider-title">Indicadores</div>
+                    <div class="form-group"><label>Peso M</label><input type="number" step="0.01" id="pd_peso_m" class="form-input"></div>
+                    <div class="form-group"><label>GAD M</label><input type="number" step="0.01" id="pd_gad_m" class="form-input"></div>
+                    <div class="form-group"><label>Peso F</label><input type="number" step="0.01" id="pd_peso_f" class="form-input"></div>
+                    <div class="form-group"><label>GAD F</label><input type="number" step="0.01" id="pd_gad_f" class="form-input"></div>
+                    <div class="form-group"><label>Ganho Sem. Machos</label><input type="number" step="0.01" id="pd_ganho_m" class="form-input"></div>
+                    <div class="form-group"><label>Ganho Sem. Fêmeas</label><input type="number" step="0.01" id="pd_ganho_f" class="form-input"></div>
+                    <div class="form-group"><label>Energia Machos</label><input type="number" step="0.01" id="pd_energia_m" class="form-input"></div>
+                    <div class="form-group"><label>Energia Fêmeas</label><input type="number" step="0.01" id="pd_energia_f" class="form-input"></div>
+                    <div class="form-group full-width"><label>Relação Machos Por Fêmeas</label><input type="number" step="0.01" id="pd_relacao" class="form-input"></div>
+                    <div class="form-group"><label>STD_Unif</label><input type="number" step="0.01" id="pd_std_unif" class="form-input"></div>
+                    <div class="form-group"><label>C.V</label><input type="number" step="0.01" id="pd_cv" class="form-input"></div>
+                    <div class="form-group"><label>% Mortalidade Sem.</label><input type="number" step="0.01" id="pd_mort" class="form-input"></div>
+                    <div class="form-group"><label>STD Viabilidade</label><input type="number" step="0.01" id="pd_std_viab" class="form-input"></div>
+
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-panel">
+
+        <div id="view-table-dashboard" style="display: none; flex-direction: column; height: 100%; overflow-y: auto;">
+            <header class="header" style="margin-bottom: 20px;">
+                <h1>Dashboard Estratégico (Peso Machos)</h1>
+                <div class="header-actions">
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                </div>
+            </header>
+            
+            <div id="dashboardEmptyState" style="display: flex; flex: 1; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; text-align: center; flex-direction: column; gap: 15px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--red-vivid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+                <p>O dashboard estratégico só funciona mediante a informações registradas.<br>Cadastre dados na aba <b>Peso Machos</b> para gerar os gráficos automaticamente.</p>
+            </div>
+
+            <div id="dashboardCharts" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px;">
+                <div class="chart-card">
+                    <h3>GAD Padrão x GAD Real</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartGad"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Peso Médio x Peso Padrão</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPeso"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>% Acima do Peso (Geral)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartAcimaPeso"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Uniformidade (UNI)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartUni"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="view-table-matriz" style="display: flex; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório de Matriz</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('mainTable', 'Relatório de Matriz')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('mainTable', 'Matriz')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtn" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório de Matriz - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDateMatriz"></span></p></div>
+                <table class="data-table" id="mainTable">
+                    <thead>
+                        <tr>
+                            <th>Tecnico</th><th>Data</th><th>Lote</th><th>Mês</th><th>Ano</th><th>Dia</th><th>Semana</th><th>Aviário</th>
+                            <th>Produção</th><th>Quebrados</th><th>Trincados</th><th>Deformados</th><th>Duas Gemas</th><th>Pequenos</th>
+                            <th>Sujos de Cama</th><th>Sujos de Ninho</th><th>Sujos Descartes</th><th>Ovos Comercio</th><th>Ovos Limpos</th><th>Ovos Para Incubatório</th>
+                            <th class="calc-header">% Produção</th><th class="calc-header">% Quebrados</th><th class="calc-header">% Trincados</th><th class="calc-header">% Deformados</th><th class="calc-header">% Duas gemas</th><th class="calc-header">% Pequenos</th>
+                            <th class="calc-header">% Sujos de Cama</th><th class="calc-header">% Sujos de Ninho</th><th class="calc-header">% Sujos Descartes</th><th class="calc-header">% Ovos Comercio</th><th class="calc-header">% Ovos Limpos</th><th class="calc-header">% Ovos Para Incubatório</th>
+                            <th>BOX 1</th><th>Qtd</th><th>BOX 2</th><th>Qtd</th><th>BOX 3</th><th>Qtd</th><th>BOX 4</th><th>Qtd</th>
+                            <th>BOX 5</th><th>Qtd</th><th>BOX 6</th><th>Qtd</th><th>BOX 7</th><th>Qtd</th><th>BOX 8</th><th>Qtd</th>
+                            <th class="calc-header">MORT</th><th class="calc-header">SALDO</th><th class="calc-header">Qtd Saldo</th><th class="calc-header">%</th>
+                            <th>BOX 1</th><th>Qtd</th><th>BOX 2</th><th>Qtd</th><th>BOX 3</th><th>Qtd</th><th>BOX 4</th><th>Qtd</th>
+                            <th>BOX 5</th><th>Qtd</th><th>BOX 6</th><th>Qtd</th><th>BOX 7</th><th>Qtd</th><th>BOX 8</th><th>Qtd</th>
+                            <th class="calc-header">MORT</th><th class="calc-header">SALDO</th><th class="calc-header">Qtd. Saldo</th><th class="calc-header">%</th><th class="calc-header">% MACHOS</th><th class="calc-header">Qtd %</th>
+                            <th class="action-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-table-peso-femeas" style="display: none; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório Peso Fêmeas</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('pesoFemeasTable', 'Relatório Peso Fêmeas')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('pesoFemeasTable', 'PesoFemeas')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnPF" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório Peso Fêmeas - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDatePF"></span></p></div>
+                <table class="data-table" id="pesoFemeasTable">
+                    <thead>
+                        <tr>
+                            <th>Tecnico</th><th>Data de fechamento</th><th>Mês</th><th>Ano</th><th>Granja</th><th>Lote</th><th>Aviário</th><th>Semana</th>
+                            <th class="calc-header">Peso F</th>
+                            <th>1</th><th>Unif</th><th>2</th><th>Unif</th><th>3</th><th>Unif</th><th>4</th><th>Unif</th>
+                            <th>5</th><th>Unif</th><th>6</th><th>Unif</th><th>7</th><th>Unif</th><th>8</th><th>Unif</th>
+                            <th class="calc-header">GAD F</th><th>GAD REAL</th><th class="calc-header">Peso Médio</th><th class="calc-header">Unif</th>
+                            <th>Meta</th><th>Real</th><th>M. Meta</th><th>M. Real</th><th class="calc-header">%Acima do peso</th>
+                            <th class="action-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyPesoFemeas"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-table-peso-machos" style="display: none; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório Peso Machos</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('pesoMachosTable', 'Relatório Peso Machos')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('pesoMachosTable', 'PesoMachos')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnPM" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório Peso Machos - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDatePM"></span></p></div>
+                <table class="data-table" id="pesoMachosTable">
+                    <thead>
+                        <tr>
+                            <th>Tecnico</th><th>Data de Fechamento</th><th>Mês</th><th>Ano</th><th>Granja</th><th>Lote</th><th>Aviário</th><th>Sem.</th>
+                            <th class="calc-header">Peso Padrão</th><th>Peso Médio</th><th>UNI</th>
+                            <th>Box 1</th><th>CV leve 1</th><th>Unif. Leve 1</th><th>GAD leve</th>
+                            <th>Box 2</th><th>CV leve 2</th><th>Unif. leve 2</th><th>GAD leve 2</th>
+                            <th>Box 3</th><th>CV Pesado</th><th>Unif. Pesado</th><th>GAD Pesado</th>
+                            <th>Box 4</th><th>CV Pesado2</th><th>Unif. Pesado 2</th><th>GAD Pesado 2</th>
+                            <th>Box 5</th><th>CV. L</th><th>Unif. L</th><th>GAD. L</th>
+                            <th>Box 6</th><th>CV. L2</th><th>Unif. L2</th><th>GAD. L2</th>
+                            <th>Box 7</th><th>CV. P</th><th>Unif. P</th><th>GAD. P</th>
+                            <th>Box 8</th><th>CV. P2</th><th>Unif. P2</th><th>GAD. P2</th>
+                            <th class="calc-header">GAD M</th><th class="calc-header">GAD REAL</th>
+                            <th class="calc-header">%Acima Peso 1</th><th class="calc-header">%Acima Peso 2</th><th class="calc-header">%Acima Peso 3</th><th class="calc-header">%Acima Peso 4</th><th class="calc-header">%ACIMA PESO GERAL</th>
+                            <th class="calc-header">%Acima Peso 5</th><th class="calc-header">%Acima Peso 6</th><th class="calc-header">%Acima Peso 7</th><th class="calc-header">%Acima Peso 8</th>
+                            <th class="action-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyPesoMachos"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-table-real-meta" style="display: none; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório Real x Meta</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('realMetaTable', 'Relatório Real x Meta')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('realMetaTable', 'Real_Meta')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnRM" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório Real x Meta - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDateRM"></span></p></div>
+                <table class="data-table" id="realMetaTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="vertical-align: middle;">Tecnico</th>
+                            <th rowspan="2" style="vertical-align: middle;">Lote</th>
+                            <th rowspan="2" style="vertical-align: middle;">Aviário</th>
+                            <th rowspan="2" style="vertical-align: middle;">Semana</th>
+                            <th colspan="2" style="border-bottom: 1px solid #444;">Peso Ovo</th>
+                            <th colspan="2" style="border-bottom: 1px solid #444;">Aproveitamento</th>
+                            <th colspan="3" style="border-bottom: 1px solid #444;">Macho x Fêmea</th>
+                            <th rowspan="2" class="action-col" style="vertical-align: middle;">Ações</th>
+                        </tr>
+                        <tr>
+                            <th class="calc-header">Meta</th><th class="calc-header">Real</th>
+                            <th class="calc-header">Meta</th><th class="calc-header">Real</th>
+                            <th class="calc-header">Ideal</th><th class="calc-header">Máximo</th><th class="calc-header">Real</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyRealMeta"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-table-padrao" style="display: none; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório Padrão</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('padraoTable', 'Relatório Padrão')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('padraoTable', 'Padrao')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnPD" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório Padrão - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDatePadrao"></span></p></div>
+                <table class="data-table" id="padraoTable">
+                    <thead>
+                        <tr>
+                            <th>Semana</th><th>Peso M</th><th>GAD M</th><th>Peso F</th><th>GAD F</th><th>Ganho Semanal Machos</th><th>Ganho Semanal Femeas</th><th>Energia machos</th><th>Energia Femeas</th><th>Relação Machos Por Fêmeas</th><th>STD_Unif</th><th>C.V</th><th>%Mortalidade Semanal</th><th>STD Viabilidade</th><th class="action-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyPadrao"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA35WBVNm2VxDP1se80CqGtTR5h3u6f99U",
+            authDomain: "rogerio-ece42.firebaseapp.com",
+            databaseURL: "https://rogerio-ece42-default-rtdb.firebaseio.com",
+            projectId: "rogerio-ece42",
+            storageBucket: "rogerio-ece42.firebasestorage.app",
+            messagingSenderId: "613749922342",
+            appId: "1:613749922342:web:c99e957c825345583264e7"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const storage = firebase.storage();
+
+        // --- VARIÁVEIS GLOBAIS DE AUTENTICAÇÃO ---
+        let loggedUser = null;
+        let loggedUserName = "Visitante";
+        let loggedUserType = ""; 
+
+        // Função de Alerta Customizado
+        function showCustomAlert(message, title = "Aviso") {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            document.getElementById('customAlertBox').classList.add('active');
+        }
+        function closeCustomAlert() {
+            document.getElementById('customAlertBox').classList.remove('active');
+        }
+        window.alert = showCustomAlert; 
+
+        // --- SISTEMA DE LOGIN E CADASTRO ---
+        function toggleAuthMode() {
+            const login = document.getElementById('formLoginContainer');
+            const register = document.getElementById('formRegisterContainer');
+            if(login.style.display === 'none') {
+                login.style.display = 'block'; register.style.display = 'none';
+            } else {
+                login.style.display = 'none'; register.style.display = 'block';
+            }
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nome = document.getElementById('regNome').value;
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value;
+            const type = document.getElementById('regType').value;
+
+            database.ref('users/' + user).once('value').then((snapshot) => {
+                if(snapshot.exists() || user.toUpperCase() === 'DESENVOLVEDOR') {
+                    showCustomAlert('Este usuário já existe ou já solicitou acesso. Tente outro.', 'Erro de Cadastro');
+                    document.getElementById('registerForm').reset();
+                } else {
+                    database.ref('users/' + user).set({
+                        nome: nome,
+                        senha: pass,
+                        tipo: type,
+                        status: 'Pendente'
+                    }).then(() => {
+                        showCustomAlert('Seu cadastro está em análise esperando autorização do administrador.', 'Sucesso!');
+                        document.getElementById('registerForm').reset();
+                        toggleAuthMode();
+                    });
+                }
+            });
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value;
+
+            if (user.toUpperCase() === 'DESENVOLVEDOR' && pass === '1709') { 
+                loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor');
+            } else {
+                database.ref('users/' + user).once('value').then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        if (userData.senha === pass) {
+                            if (userData.status === 'Ativo') {
+                                loginSuccess(user, userData.nome, userData.tipo, userData.avatarUrl, userData.coverUrl);
+                            } else if (userData.status === 'Pendente') {
+                                showCustomAlert('Sua conta ainda está em análise pelo administrador.', 'Acesso Negado');
+                                document.getElementById('loginForm').reset();
+                            } else {
+                                showCustomAlert('Sua conta foi desativada.', 'Acesso Negado');
+                                document.getElementById('loginForm').reset();
+                            }
+                        } else {
+                            showCustomAlert('Usuário ou senha incorretos!', 'Erro');
+                            document.getElementById('loginForm').reset();
+                        }
+                    } else {
+                        showCustomAlert('Usuário não encontrado!', 'Erro');
+                        document.getElementById('loginForm').reset();
+                    }
+                }).catch((error) => {
+                    showCustomAlert('Erro ao conectar ao banco de dados.', 'Erro de Conexão');
+                });
+            }
+        });
+
+        function loginSuccess(username, fullname, type, avatarUrl, coverUrl) {
+            loggedUser = username;
+            loggedUserName = fullname;
+            loggedUserType = type;
+            
+            document.getElementById('profName').value = fullname;
+            document.getElementById('profUser').value = username;
+            
+            if(avatarUrl) {
+                document.getElementById('sidebarProfilePic').src = avatarUrl;
+                document.getElementById('avatarPreview').src = avatarUrl;
+            }
+            if(coverUrl) {
+                document.getElementById('coverPreview').src = coverUrl;
+            }
+
+            if(type === 'admin' || type === 'desenvolvedor') {
+                document.getElementById('btn-acessos').style.display = 'block';
+            }
+
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.style.opacity = '0';
+            setTimeout(() => { loginScreen.style.display = 'none'; }, 500);
+            
+            updateDashboardPesoMachos();
+        }
+
+        // --- GESTÃO DE ACESSOS ---
+        function openAccessModal() { document.getElementById('accessModal').classList.add('active'); loadAccessTable(); }
+        function closeAccessModal() { document.getElementById('accessModal').classList.remove('active'); }
+
+        function loadAccessTable() {
+            const tbody = document.getElementById('accessTableBody');
+            tbody.innerHTML = '';
+            database.ref('users').once('value').then((snapshot) => {
+                snapshot.forEach((childSnapshot) => {
+                    const userKey = childSnapshot.key;
+                    const data = childSnapshot.val();
+                    let statusClass = 'status-pendente';
+                    if(data.status === 'Ativo') statusClass = 'status-ativo';
+                    if(data.status === 'Inativo') statusClass = 'status-inativo';
+
+                    let actionsHtml = `<select onchange="updateUserStatus('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;"><option value="Pendente" ${data.status === 'Pendente' ? 'selected' : ''}>Pendente</option><option value="Ativo" ${data.status === 'Ativo' ? 'selected' : ''}>Ativo</option><option value="Inativo" ${data.status === 'Inativo' ? 'selected' : ''}>Inativo</option></select>`;
+                    if (loggedUserType === 'desenvolvedor') { actionsHtml += `<button onclick="forcePasswordChange('${userKey}')" style="background:var(--red-vivid); color:#fff; border:none; padding:4px; border-radius:4px; cursor:pointer; margin-left:5px; font-size:10px;">Senha</button>`; }
+
+                    tbody.innerHTML += `<tr><td>${data.nome}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${data.tipo.toUpperCase()}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
+                });
+            });
+        }
+
+        function updateUserStatus(userKey, newStatus) { database.ref('users/' + userKey).update({ status: newStatus }).then(() => { loadAccessTable(); }); }
+        function forcePasswordChange(userKey) { const newPass = prompt("Digite a nova senha para o usuário " + userKey + ":"); if (newPass) { database.ref('users/' + userKey).update({ senha: newPass }).then(() => { showCustomAlert("Senha alterada com sucesso!", "Gestão de Acessos"); }); } }
+
+        // --- FULLSCREEN ---
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(err => { showCustomAlert(`Erro ao ativar tela cheia: ${err.message}`); });
+            } else { document.exitFullscreen(); }
+        }
+
+        // --- EXPORTAÇÕES ---
+        function exportExcel(tableId, filename) {
+            let originalTable = document.getElementById(tableId);
+            let clonedTable = originalTable.cloneNode(true);
+            let actionCols = clonedTable.querySelectorAll('.action-col');
+            actionCols.forEach(col => col.parentNode.removeChild(col));
+
+            let wb = XLSX.utils.table_to_book(clonedTable, {sheet: "Relatorio"});
+            XLSX.writeFile(wb, `${filename}_${new Date().toLocaleDateString('pt-BR')}.xlsx`);
+        }
+
+        function exportPDF(tableId, title) {
+            const element = document.getElementById(tableId).parentNode;
+            const dateSpans = document.querySelectorAll('[id^="pdfDate"]');
+            dateSpans.forEach(span => span.innerText = new Date().toLocaleDateString('pt-BR'));
+            element.classList.add('pdf-export-mode');
+
+            const opt = {
+                margin:       10,
+                filename:     `${title.replace(/ /g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a2', orientation: 'landscape' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => { element.classList.remove('pdf-export-mode'); });
+        }
+
+        // --- PERFIL E MODAL ---
+        const profileModal = document.getElementById('profileModal');
+        let pendingAvatarFile = null; 
+        let pendingCoverFile = null;
+        
+        function openModal() { 
+            profileModal.classList.add('active'); 
+            document.getElementById('profCurrentPass').value = ''; 
+            document.getElementById('profNewPass').value = ''; 
+            pendingAvatarFile = null; 
+            pendingCoverFile = null;
+        }
+        
+        function closeModal() { 
+            profileModal.classList.remove('active'); 
+            pendingAvatarFile = null;
+            pendingCoverFile = null;
+        }
+
+        async function saveProfile() { 
+            const btnSave = document.getElementById('btnSaveProfile');
+            btnSave.innerText = "Salvando...";
+            btnSave.disabled = true;
+
+            const novoNome = document.getElementById('profName').value;
+
+            // Atualiza UI Imediatamente
+            document.getElementById('sidebarProfilePic').src = document.getElementById('avatarPreview').src;
+            loggedUserName = novoNome;
+            
+            if(loggedUser) {
+                database.ref('users/' + loggedUser).update({
+                    nome: novoNome
+                }).then(() => {
+                    showCustomAlert('Perfil salvo com sucesso!', 'Sucesso');
+                    closeModal();
+                }).finally(() => {
+                    btnSave.innerText = "Salvar Perfil";
+                    btnSave.disabled = false;
+                });
+            } else {
+                closeModal();
+                btnSave.innerText = "Salvar Perfil";
+                btnSave.disabled = false;
+            }
+        }
+
+        // --- NAVEGAÇÃO DE ABAS ---
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if(item.id === 'btn-acessos') return;
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                const tabName = item.id.replace('tab-', '');
+                
+                document.querySelectorAll('[id^="view-form-"]').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('[id^="view-table-"]').forEach(el => el.style.display = 'none');
+                
+                const formView = document.getElementById(`view-form-${tabName}`);
+                const tableView = document.getElementById(`view-table-${tabName}`);
+                
+                if(formView) formView.style.display = 'flex';
+                if(tableView) {
+                    tableView.style.display = 'flex';
+                    if(tabName === 'dashboard') updateDashboardPesoMachos();
+                }
+            });
+        });
+
+        // --- FIREBASE CRUD LOGIC PARA FORMULÁRIOS ---
+        function getFormData(formId) {
+            const form = document.getElementById(formId);
+            const data = {};
+            form.querySelectorAll('input, select').forEach(input => {
+                if(input.id) data[input.id] = input.value;
+            });
+            return data;
+        }
+
+        function deleteRecord(path) {
+            if(confirm('Deseja realmente excluir este registro?')) {
+                database.ref(path).remove().then(() => showCustomAlert('Registro excluído.'));
+            }
+        }
+
+        // MATRIZ
+        document.getElementById('cadastroMatrizForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroMatrizForm');
+            data.tecnico = loggedUserName;
+            database.ref('matriz').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroMatrizForm').reset();
+            });
+        });
+
+        database.ref('matriz').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const d = child.val();
+                let tr = `<tr>
+                    <td>${d.tecnico || '-'}</td><td>${d.c_data || '-'}</td><td>${d.c_lote || '-'}</td>
+                    <td>-</td><td>-</td><td>-</td><td>${d.c_semana || '-'}</td><td>${d.c_aviario || '-'}</td>
+                    <td>${d.c_producao || '-'}</td><td>${d.c_quebrados || '-'}</td><td>${d.c_trincados || '-'}</td>
+                    <td>${d.c_deformados || '-'}</td><td>${d.c_duasgemas || '-'}</td><td>${d.c_pequenos || '-'}</td>
+                    <td>${d.c_sujoscama || '-'}</td><td>${d.c_sujosninho || '-'}</td><td>${d.c_sujosdescartes || '-'}</td>
+                    <td>${d.c_ovoscomercio || '-'}</td><td>${d.c_ovoslimpos || '-'}</td><td>${d.c_ovosincubatorio || '-'}</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td>${d.f_b1||'-'}</td><td>${d.f_q1||'-'}</td><td>${d.f_b2||'-'}</td><td>${d.f_q2||'-'}</td>
+                    <td>${d.f_b3||'-'}</td><td>${d.f_q3||'-'}</td><td>${d.f_b4||'-'}</td><td>${d.f_q4||'-'}</td>
+                    <td>${d.f_b5||'-'}</td><td>${d.f_q5||'-'}</td><td>${d.f_b6||'-'}</td><td>${d.f_q6||'-'}</td>
+                    <td>${d.f_b7||'-'}</td><td>${d.f_q7||'-'}</td><td>${d.f_b8||'-'}</td><td>${d.f_q8||'-'}</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td>${d.m_b1||'-'}</td><td>${d.m_q1||'-'}</td><td>${d.m_b2||'-'}</td><td>${d.m_q2||'-'}</td>
+                    <td>${d.m_b3||'-'}</td><td>${d.m_q3||'-'}</td><td>${d.m_b4||'-'}</td><td>${d.m_q4||'-'}</td>
+                    <td>${d.m_b5||'-'}</td><td>${d.m_q5||'-'}</td><td>${d.m_b6||'-'}</td><td>${d.m_q6||'-'}</td>
+                    <td>${d.m_b7||'-'}</td><td>${d.m_q7||'-'}</td><td>${d.m_b8||'-'}</td><td>${d.m_q8||'-'}</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('matriz/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+        });
+
+        // PESO FÊMEAS
+        document.getElementById('cadastroPesoFemeasForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroPesoFemeasForm');
+            data.tecnico = loggedUserName;
+            database.ref('peso_femeas').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroPesoFemeasForm').reset();
+            });
+        });
+
+        database.ref('peso_femeas').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBodyPesoFemeas');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const d = child.val();
+                let tr = `<tr>
+                    <td>${d.tecnico || '-'}</td><td>${d.pf_data || '-'}</td><td>-</td><td>-</td>
+                    <td>${d.pf_granja || '-'}</td><td>${d.pf_lote || '-'}</td><td>${d.pf_aviario || '-'}</td><td>${d.pf_semana || '-'}</td>
+                    <td>-</td>
+                    <td>${d.pf_p1||'-'}</td><td>${d.pf_u1||'-'}</td><td>${d.pf_p2||'-'}</td><td>${d.pf_u2||'-'}</td>
+                    <td>${d.pf_p3||'-'}</td><td>${d.pf_u3||'-'}</td><td>${d.pf_p4||'-'}</td><td>${d.pf_u4||'-'}</td>
+                    <td>${d.pf_p5||'-'}</td><td>${d.pf_u5||'-'}</td><td>${d.pf_p6||'-'}</td><td>${d.pf_u6||'-'}</td>
+                    <td>${d.pf_p7||'-'}</td><td>${d.pf_u7||'-'}</td><td>${d.pf_p8||'-'}</td><td>${d.pf_u8||'-'}</td>
+                    <td>-</td><td>${d.pf_gad_real||'-'}</td><td>-</td><td>-</td>
+                    <td>${d.pf_meta||'-'}</td><td>${d.pf_real||'-'}</td><td>${d.pf_m_meta||'-'}</td><td>${d.pf_m_real||'-'}</td><td>-</td>
+                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('peso_femeas/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+        });
+
+        // PESO MACHOS
+        document.getElementById('cadastroPesoMachosForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroPesoMachosForm');
+            data.tecnico = loggedUserName;
+            database.ref('peso_machos').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroPesoMachosForm').reset();
+            });
+        });
+
+        database.ref('peso_machos').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBodyPesoMachos');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const d = child.val();
+                let tr = `<tr>
+                    <td>${d.tecnico || '-'}</td><td>${d.pm_data || '-'}</td><td>-</td><td>-</td>
+                    <td>${d.pm_granja || '-'}</td><td>${d.pm_lote || '-'}</td><td>${d.pm_aviario || '-'}</td><td>${d.pm_semana || '-'}</td>
+                    <td>-</td><td>${d.pm_peso_medio||'-'}</td><td>${d.pm_uni||'-'}</td>
+                    <td>${d.pm_b1||'-'}</td><td>${d.pm_cv1||'-'}</td><td>${d.pm_u1||'-'}</td><td>${d.pm_g1||'-'}</td>
+                    <td>${d.pm_b2||'-'}</td><td>${d.pm_cv2||'-'}</td><td>${d.pm_u2||'-'}</td><td>${d.pm_g2||'-'}</td>
+                    <td>${d.pm_b3||'-'}</td><td>${d.pm_cv3||'-'}</td><td>${d.pm_u3||'-'}</td><td>${d.pm_g3||'-'}</td>
+                    <td>${d.pm_b4||'-'}</td><td>${d.pm_cv4||'-'}</td><td>${d.pm_u4||'-'}</td><td>${d.pm_g4||'-'}</td>
+                    <td>${d.pm_b5||'-'}</td><td>${d.pm_cv5||'-'}</td><td>${d.pm_u5||'-'}</td><td>${d.pm_g5||'-'}</td>
+                    <td>${d.pm_b6||'-'}</td><td>${d.pm_cv6||'-'}</td><td>${d.pm_u6||'-'}</td><td>${d.pm_g6||'-'}</td>
+                    <td>${d.pm_b7||'-'}</td><td>${d.pm_cv7||'-'}</td><td>${d.pm_u7||'-'}</td><td>${d.pm_g7||'-'}</td>
+                    <td>${d.pm_b8||'-'}</td><td>${d.pm_cv8||'-'}</td><td>${d.pm_u8||'-'}</td><td>${d.pm_g8||'-'}</td>
+                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('peso_machos/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+        });
+
+        // REAL X META
+        document.getElementById('cadastroRealMetaForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroRealMetaForm');
+            data.tecnico = loggedUserName;
+            database.ref('real_meta').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroRealMetaForm').reset();
+            });
+        });
+
+        database.ref('real_meta').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBodyRealMeta');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const d = child.val();
+                let tr = `<tr>
+                    <td>${d.tecnico || '-'}</td><td>${d.rm_lote || '-'}</td><td>${d.rm_aviario || '-'}</td><td>${d.rm_semana || '-'}</td>
+                    <td>${d.rm_peso_meta||'-'}</td><td>${d.rm_peso_real||'-'}</td>
+                    <td>${d.rm_aprov_meta||'-'}</td><td>${d.rm_aprov_real||'-'}</td>
+                    <td>${d.rm_mxf_ideal||'-'}</td><td>${d.rm_mxf_maximo||'-'}</td><td>${d.rm_mxf_real||'-'}</td>
+                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('real_meta/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+        });
+
+        // PADRÃO
+        document.getElementById('cadastroPadraoForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroPadraoForm');
+            database.ref('padrao').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroPadraoForm').reset();
+            });
+        });
+
+        database.ref('padrao').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBodyPadrao');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const d = child.val();
+                let tr = `<tr>
+                    <td>${d.pd_semana||'-'}</td><td>${d.pd_peso_m||'-'}</td><td>${d.pd_gad_m||'-'}</td>
+                    <td>${d.pd_peso_f||'-'}</td><td>${d.pd_gad_f||'-'}</td><td>${d.pd_ganho_m||'-'}</td>
+                    <td>${d.pd_ganho_f||'-'}</td><td>${d.pd_energia_m||'-'}</td><td>${d.pd_energia_f||'-'}</td>
+                    <td>${d.pd_relacao||'-'}</td><td>${d.pd_std_unif||'-'}</td><td>${d.pd_cv||'-'}</td>
+                    <td>${d.pd_mort||'-'}</td><td>${d.pd_std_viab||'-'}</td>
+                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('padrao/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+        });
+
+        // Toggle Modo Edição e Exclusão
+        ['', 'PF', 'PM', 'RM', 'PD'].forEach(suf => {
+            const btn = document.getElementById(`editToggleBtn${suf}`);
+            if(btn) {
+                btn.addEventListener('click', function() {
+                    const tableContainer = this.closest('.header').nextElementSibling;
+                    tableContainer.classList.toggle('edit-mode');
+                    this.classList.toggle('active');
+                });
+            }
+        });
+
+        function updateDashboardPesoMachos() {
+            // Placeholder para atualizar os gráficos 
+            // Essa função é chamada ao logar, trocar de tela e alterar filtros
+        }
+
+        // Inicializar a tela primária
+        document.getElementById('tab-matriz').click();
+
+    </script>
+</body>
+</html>
