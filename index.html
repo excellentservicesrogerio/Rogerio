@@ -40,10 +40,24 @@
             100% { background-position: 0% 50%; opacity: 0.9; }
         }
 
-        /* TELA DE LOGIN E REGISTRO */
+        /* TELA DE LOGIN, REGISTRO E BEM VINDO */
         #login-screen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--matte-black);
             display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease;
+        }
+
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--matte-black);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; 
+            opacity: 0; visibility: hidden; transition: opacity 0.5s ease;
+        }
+        #welcome-screen.active { opacity: 1; visibility: visible; }
+        #welcome-screen h2 { color: var(--text-main); font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+        #welcome-screen p { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid rgba(230, 25, 59, 0.2);
+            border-top-color: var(--red-vivid); border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
         .login-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 360px; max-width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transition: height 0.3s; }
@@ -67,16 +81,30 @@
         /* SIDEBAR E FORMULÁRIOS */
         .sidebar-nav {
             width: 120px; background: linear-gradient(180deg, #170005 0%, var(--red-dark) 50%, #0a0002 100%); background-size: 200% 200%;
-            animation: elegantPulse 8s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; padding: 30px 0; z-index: 1002;
+            animation: elegantPulse 8s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; padding: 30px 0 15px 0; z-index: 1002;
             border-right: 1px solid rgba(230, 25, 59, 0.2); box-shadow: 5px 0 20px rgba(0,0,0,0.5); overflow-y: auto;
         }
         .sidebar-nav::-webkit-scrollbar { display: none; }
 
+        /* ANIMAÇÃO DAS BORDAS DE PERFIL */
+        @keyframes borderGoldPulse {
+            0% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; }
+            50% { box-shadow: 0 0 15px #ffaa00, inset 0 0 8px #ffaa00; border-color: #ffb700; }
+            100% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; }
+        }
+        @keyframes borderSilverPulse {
+            0% { box-shadow: 0 0 5px #c0c0c0, inset 0 0 5px #c0c0c0; border-color: #c0c0c0; }
+            50% { box-shadow: 0 0 15px #ffffff, inset 0 0 8px #ffffff; border-color: #ffffff; }
+            100% { box-shadow: 0 0 5px #c0c0c0, inset 0 0 5px #c0c0c0; border-color: #c0c0c0; }
+        }
+
         .nav-profile {
             width: 65px; height: 65px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); margin-bottom: 30px;
-            cursor: pointer; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: transform 0.3s ease, border-color 0.3s ease; background-color: #222;
+            cursor: pointer; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: transform 0.3s ease; background-color: #222;
         }
-        .nav-profile:hover { transform: scale(1.05); border-color: #fff; }
+        .nav-profile:hover { transform: scale(1.05); }
+        .nav-profile.role-ouro { animation: borderGoldPulse 2.5s infinite ease-in-out; border-width: 2px; }
+        .nav-profile.role-prata { animation: borderSilverPulse 2.5s infinite ease-in-out; border-width: 2px; }
         .nav-profile img { width: 100%; height: 100%; object-fit: cover; }
 
         .nav-item {
@@ -86,8 +114,11 @@
         .nav-item:hover, .nav-item.active { color: #fff; background: rgba(255, 255, 255, 0.05); }
         .nav-item.active::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background-color: #fff; }
 
-        .nav-item-special { margin-top: auto; margin-bottom: 10px; width: 85%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); color: rgba(255, 255, 255, 0.8); }
+        .nav-item-special { margin-top: 20px; margin-bottom: 10px; width: 85%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); color: rgba(255, 255, 255, 0.8); }
         .nav-item-special:hover { background-color: rgba(0, 0, 0, 0.7); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+
+        .btn-logout { margin-top: auto; color: #ff4d4d; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .btn-logout:hover { background: rgba(255, 77, 77, 0.1); color: #ff6666; }
 
         .sidebar-form { width: 400px; background-color: var(--matte-black); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; z-index: 1001; }
         .form-header { padding: 30px 25px 15px 25px; }
@@ -125,7 +156,6 @@
         .gear-btn svg { width: 26px; height: 26px; transition: transform 0.3s ease; }
         .gear-btn.active { color: var(--red-vivid); }
         .gear-btn:hover svg { animation: spin 2s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .table-container { flex: 1; background-color: var(--matte-black); border-radius: 12px; border: 1px solid var(--border-subtle); margin-top: 20px; overflow: auto; }
         .table-container::-webkit-scrollbar { height: 8px; width: 8px; }
@@ -261,6 +291,12 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
     </button>
     <div class="mobile-backdrop" onclick="toggleMobileSidebar()"></div>
+
+    <div id="welcome-screen">
+        <h2 id="welcomeName">Bem Vindo</h2>
+        <p>Carregando seu ambiente High Performance...</p>
+        <div class="spinner"></div>
+    </div>
 
     <div id="cropperModal" class="modal-overlay" style="z-index: 10001;">
         <div class="profile-modal-wrapper" style="width: 500px; max-width: 90%;">
@@ -412,7 +448,12 @@
         <div class="nav-item" id="tab-real-meta">Real x Meta</div>
         <div class="nav-item nav-item-special" id="tab-padrao">Padrão</div>
         
-        <div class="nav-item" id="btn-acessos" style="display: none; margin-top: 15px; color: var(--red-vivid);" onclick="openAccessModal()">Acessos</div>
+        <div class="nav-item" id="btn-acessos" style="display: none; margin-top: 10px; color: var(--red-vivid);" onclick="openAccessModal()">Acessos</div>
+        
+        <div class="nav-item btn-logout" onclick="logout()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            Sair
+        </div>
     </nav>
 
     <aside class="sidebar-form">
@@ -835,6 +876,10 @@
         let pendingAvatarDataUrl = null;
         let pendingCoverDataUrl = null;
 
+        // Controle de Sessão e Inatividade
+        const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 minutos
+        let inactivityInterval;
+
         // --- SISTEMA MOBILE RESPONSIVO ---
         function toggleMobileSidebar() {
             document.body.classList.toggle('sidebar-open');
@@ -851,7 +896,7 @@
         }
         window.alert = showCustomAlert; 
 
-        // --- SISTEMA DE LOGIN E CADASTRO ---
+        // --- SISTEMA DE LOGIN, SESSÃO E CADASTRO ---
         function toggleAuthMode() {
             const login = document.getElementById('formLoginContainer');
             const register = document.getElementById('formRegisterContainer');
@@ -860,6 +905,48 @@
             } else {
                 login.style.display = 'none'; register.style.display = 'block';
             }
+        }
+
+        // Registra atividade para não deslogar
+        function resetInactivityTimer() {
+            if (loggedUser) {
+                localStorage.setItem('lastActivity', Date.now());
+            }
+        }
+
+        function startInactivityCheck() {
+            // Mapeia eventos para resetar o tempo de inatividade
+            ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+                document.addEventListener(evt, resetInactivityTimer);
+            });
+
+            clearInterval(inactivityInterval);
+            inactivityInterval = setInterval(() => {
+                const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
+                if (Date.now() - lastActivity > INACTIVITY_LIMIT_MS) {
+                    showCustomAlert("Sua sessão expirou devido a 10 minutos de inatividade.", "Sessão Expirada");
+                    logout();
+                }
+            }, 30000); // Verifica a cada 30 segundos
+        }
+
+        function logout() {
+            localStorage.removeItem('sessionData');
+            localStorage.removeItem('lastActivity');
+            loggedUser = null;
+            loggedUserName = "Visitante";
+            loggedUserType = "";
+
+            clearInterval(inactivityInterval);
+            ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+                document.removeEventListener(evt, resetInactivityTimer);
+            });
+
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.style.display = 'flex';
+            setTimeout(() => { loginScreen.style.opacity = '1'; }, 50);
+            
+            document.getElementById('loginForm').reset();
         }
 
         document.getElementById('registerForm').addEventListener('submit', function(e) {
@@ -894,16 +981,15 @@
             const pass = document.getElementById('loginPass').value;
 
             if (user.toUpperCase() === 'DESENVOLVEDOR' && pass === '1709') { 
-                // Ajuste Cirúrgico: Faz com que o desenvolvedor leia as próprias fotos salvas no DB!
                 database.ref('users/DESENVOLVEDOR').once('value').then((snap) => {
                     if (snap.exists()) {
                         const d = snap.val();
-                        loginSuccess('DESENVOLVEDOR', d.nome || 'Marcos Valério (Dev)', 'desenvolvedor', d.avatarUrl, d.coverUrl);
+                        loginSuccess('DESENVOLVEDOR', d.nome || 'Marcos Valério (Dev)', 'desenvolvedor', d.avatarUrl, d.coverUrl, false);
                     } else {
-                        loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor');
+                        loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor', null, null, false);
                     }
                 }).catch(() => {
-                    loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor');
+                    loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor', null, null, false);
                 });
             } else {
                 database.ref('users/' + user).once('value').then((snapshot) => {
@@ -911,7 +997,7 @@
                         const userData = snapshot.val();
                         if (userData.senha === pass) {
                             if (userData.status === 'Ativo') {
-                                loginSuccess(user, userData.nome, userData.tipo, userData.avatarUrl, userData.coverUrl);
+                                loginSuccess(user, userData.nome, userData.tipo, userData.avatarUrl, userData.coverUrl, false);
                             } else if (userData.status === 'Pendente') {
                                 showCustomAlert('Sua conta ainda está em análise pelo administrador.', 'Acesso Negado');
                                 document.getElementById('loginForm').reset();
@@ -933,11 +1019,17 @@
             }
         });
 
-        function loginSuccess(username, fullname, type, avatarUrl, coverUrl) {
+        function loginSuccess(username, fullname, type, avatarUrl, coverUrl, isRestoreSession) {
             loggedUser = username;
             loggedUserName = fullname;
             loggedUserType = type;
             
+            // Salva a sessão no LocalStorage para auto-login depois
+            localStorage.setItem('sessionData', JSON.stringify({
+                username, fullname, type, avatarUrl, coverUrl
+            }));
+            resetInactivityTimer();
+
             document.getElementById('profName').value = fullname;
             document.getElementById('profUser').value = username;
             
@@ -949,16 +1041,57 @@
                 document.getElementById('coverPreview').src = coverUrl;
             }
 
+            // AJUSTE CIRÚRGICO: Define a borda animada de acordo com a função
+            const navProfile = document.querySelector('.nav-profile');
+            navProfile.classList.remove('role-ouro', 'role-prata');
             if(type === 'admin' || type === 'desenvolvedor') {
                 document.getElementById('btn-acessos').style.display = 'block';
+                navProfile.classList.add('role-ouro');
+            } else {
+                document.getElementById('btn-acessos').style.display = 'none';
+                navProfile.classList.add('role-prata');
             }
 
             const loginScreen = document.getElementById('login-screen');
-            loginScreen.style.opacity = '0';
-            setTimeout(() => { loginScreen.style.display = 'none'; }, 500);
+            const welcomeScreen = document.getElementById('welcome-screen');
+            
+            if (!isRestoreSession) {
+                // Ajuste Cirúrgico: Tela de Bem vindo somente em login explícito
+                document.getElementById('welcomeName').innerText = "Bem Vindo, " + fullname;
+                loginScreen.style.opacity = '0';
+                
+                setTimeout(() => { 
+                    loginScreen.style.display = 'none'; 
+                    welcomeScreen.classList.add('active');
+                    
+                    setTimeout(() => {
+                        welcomeScreen.classList.remove('active');
+                    }, 2000); // Exibe por 2 segundos
+                }, 500);
+            } else {
+                loginScreen.style.display = 'none';
+            }
             
             updateDashboardPesoMachos();
+            startInactivityCheck();
         }
+
+        // --- VERIFICAÇÃO INICIAL (AUTO-LOGIN) ---
+        window.onload = () => {
+            const sessionDataStr = localStorage.getItem('sessionData');
+            const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
+
+            if (sessionDataStr) {
+                if (Date.now() - lastActivity < INACTIVITY_LIMIT_MS) {
+                    const data = JSON.parse(sessionDataStr);
+                    loginSuccess(data.username, data.fullname, data.type, data.avatarUrl, data.coverUrl, true);
+                } else {
+                    logout(); // Passou de 10 min de inatividade
+                }
+            }
+            // Inicializar a tela primária por baixo dos panos
+            document.getElementById('tab-matriz').click();
+        };
 
         // --- GESTÃO DE ACESSOS ---
         function openAccessModal() { document.getElementById('accessModal').classList.add('active'); loadAccessTable(); }
@@ -970,6 +1103,8 @@
             database.ref('users').once('value').then((snapshot) => {
                 snapshot.forEach((childSnapshot) => {
                     const userKey = childSnapshot.key;
+                    if (userKey.toUpperCase() === 'DESENVOLVEDOR') return; 
+
                     const data = childSnapshot.val();
                     let statusClass = 'status-pendente';
                     if(data.status === 'Ativo') statusClass = 'status-ativo';
@@ -1109,29 +1244,27 @@
                 if(loggedUser) {
                     let updates = { nome: novoNome };
 
-                    // Ajuste Cirúrgico: Atualiza a interface IMEDIATAMENTE e adiciona fallback robusto para contornar qualquer erro do Storage
                     if (pendingAvatarDataUrl) {
-                        document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl; // Atualiza a lateral na hora!
+                        document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
                         try {
                             const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
                             await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
                             updates.avatarUrl = await avatarRef.getDownloadURL();
                         } catch(err) {
-                            updates.avatarUrl = pendingAvatarDataUrl; // Salva o base64 direto no DB se o upload falhar
+                            updates.avatarUrl = pendingAvatarDataUrl; 
                         }
                     }
                     if (pendingCoverDataUrl) {
-                        document.getElementById('coverPreview').src = pendingCoverDataUrl; // Atualiza o preview de imediato
+                        document.getElementById('coverPreview').src = pendingCoverDataUrl;
                         try {
                             const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
                             await coverRef.putString(pendingCoverDataUrl, 'data_url');
                             updates.coverUrl = await coverRef.getDownloadURL();
                         } catch(err) {
-                            updates.coverUrl = pendingCoverDataUrl; // Salva o base64 direto no DB se o upload falhar
+                            updates.coverUrl = pendingCoverDataUrl; 
                         }
                     }
 
-                    // Se preencheu as senhas, validar antes de salvar
                     if(senhaAtual || novaSenha) {
                         const snapshot = await database.ref('users/' + loggedUser).once('value');
                         const val = snapshot.val();
@@ -1146,8 +1279,15 @@
                     await database.ref('users/' + loggedUser).update(updates);
                     loggedUserName = novoNome;
                     
+                    // Atualiza cache de sessão com os novos dados do perfil
+                    const currentSession = JSON.parse(localStorage.getItem('sessionData') || '{}');
+                    currentSession.fullname = novoNome;
+                    if(updates.avatarUrl) currentSession.avatarUrl = updates.avatarUrl;
+                    if(updates.coverUrl) currentSession.coverUrl = updates.coverUrl;
+                    localStorage.setItem('sessionData', JSON.stringify(currentSession));
+                    
                     showCustomAlert('Perfil salvo com sucesso!', 'Sucesso');
-                    closeModal(); // Agora fechará de forma garantida!
+                    closeModal(); 
                 } else {
                     closeModal();
                 }
@@ -1165,7 +1305,7 @@
         // --- NAVEGAÇÃO DE ABAS ---
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                if(item.id === 'btn-acessos') return;
+                if(item.id === 'btn-acessos' || item.id === 'btn-logout' || item.classList.contains('btn-logout')) return;
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
                 
@@ -1183,7 +1323,6 @@
                     if(tabName === 'dashboard') updateDashboardPesoMachos();
                 }
 
-                // Fecha menu no mobile ao clicar em uma aba
                 if(window.innerWidth <= 900) { toggleMobileSidebar(); }
             });
         });
@@ -1209,6 +1348,8 @@
             e.preventDefault();
             const data = getFormData('cadastroMatrizForm');
             data.tecnico = loggedUserName;
+            data.userId = loggedUser; 
+            
             database.ref('matriz').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroMatrizForm').reset();
@@ -1220,6 +1361,9 @@
             tbody.innerHTML = '';
             snapshot.forEach(child => {
                 const d = child.val();
+                
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                
                 let tr = `<tr>
                     <td>${d.tecnico || '-'}</td><td>${d.c_data || '-'}</td><td>${d.c_lote || '-'}</td>
                     <td>-</td><td>-</td><td>-</td><td>${d.c_semana || '-'}</td><td>${d.c_aviario || '-'}</td>
@@ -1249,6 +1393,8 @@
             e.preventDefault();
             const data = getFormData('cadastroPesoFemeasForm');
             data.tecnico = loggedUserName;
+            data.userId = loggedUser; 
+            
             database.ref('peso_femeas').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroPesoFemeasForm').reset();
@@ -1260,6 +1406,9 @@
             tbody.innerHTML = '';
             snapshot.forEach(child => {
                 const d = child.val();
+                
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                
                 let tr = `<tr>
                     <td>${d.tecnico || '-'}</td><td>${d.pf_data || '-'}</td><td>-</td><td>-</td>
                     <td>${d.pf_granja || '-'}</td><td>${d.pf_lote || '-'}</td><td>${d.pf_aviario || '-'}</td><td>${d.pf_semana || '-'}</td>
@@ -1281,6 +1430,8 @@
             e.preventDefault();
             const data = getFormData('cadastroPesoMachosForm');
             data.tecnico = loggedUserName;
+            data.userId = loggedUser; 
+            
             database.ref('peso_machos').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroPesoMachosForm').reset();
@@ -1292,6 +1443,9 @@
             tbody.innerHTML = '';
             snapshot.forEach(child => {
                 const d = child.val();
+                
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+
                 let tr = `<tr>
                     <td>${d.tecnico || '-'}</td><td>${d.pm_data || '-'}</td><td>-</td><td>-</td>
                     <td>${d.pm_granja || '-'}</td><td>${d.pm_lote || '-'}</td><td>${d.pm_aviario || '-'}</td><td>${d.pm_semana || '-'}</td>
@@ -1316,6 +1470,8 @@
             e.preventDefault();
             const data = getFormData('cadastroRealMetaForm');
             data.tecnico = loggedUserName;
+            data.userId = loggedUser; 
+            
             database.ref('real_meta').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroRealMetaForm').reset();
@@ -1327,6 +1483,9 @@
             tbody.innerHTML = '';
             snapshot.forEach(child => {
                 const d = child.val();
+                
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+
                 let tr = `<tr>
                     <td>${d.tecnico || '-'}</td><td>${d.rm_lote || '-'}</td><td>${d.rm_aviario || '-'}</td><td>${d.rm_semana || '-'}</td>
                     <td>${d.rm_peso_meta||'-'}</td><td>${d.rm_peso_real||'-'}</td>
@@ -1380,9 +1539,6 @@
         function updateDashboardPesoMachos() {
             // Placeholder para atualizar os gráficos
         }
-
-        // Inicializar a tela primária
-        document.getElementById('tab-matriz').click();
 
     </script>
 </body>
