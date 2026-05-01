@@ -6,6 +6,9 @@
     <title>Sistema Matriz - High Performance</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
@@ -29,7 +32,7 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
-        body { display: flex; height: 100vh; width: 100vw; background-color: var(--bg-panel); color: var(--text-main); overflow: hidden; }
+        body { display: flex; height: 100vh; width: 100vw; background-color: var(--bg-panel); color: var(--text-main); overflow: hidden; position: relative; }
 
         @keyframes elegantPulse {
             0% { background-position: 0% 50%; opacity: 0.9; }
@@ -43,7 +46,7 @@
             display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease;
         }
 
-        .login-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 360px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transition: height 0.3s; }
+        .login-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 360px; max-width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transition: height 0.3s; }
         .login-wrapper::before {
             content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: linear-gradient(135deg, var(--red-dark), var(--red-vivid), var(--red-dark));
@@ -57,10 +60,14 @@
         .auth-switch { color: var(--text-muted); font-size: 12px; margin-top: 20px; cursor: pointer; transition: color 0.3s; }
         .auth-switch:hover { color: var(--red-vivid); text-decoration: underline; }
 
+        /* RESPONSIVIDADE E MENU HAMBÚRGUER */
+        .mobile-menu-toggle { display: none; position: fixed; top: 15px; left: 15px; z-index: 1003; background: var(--matte-black); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .mobile-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 1000; backdrop-filter: blur(3px); opacity: 0; transition: opacity 0.3s ease; }
+        
         /* SIDEBAR E FORMULÁRIOS */
         .sidebar-nav {
             width: 120px; background: linear-gradient(180deg, #170005 0%, var(--red-dark) 50%, #0a0002 100%); background-size: 200% 200%;
-            animation: elegantPulse 8s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; padding: 30px 0; z-index: 3;
+            animation: elegantPulse 8s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; padding: 30px 0; z-index: 1002;
             border-right: 1px solid rgba(230, 25, 59, 0.2); box-shadow: 5px 0 20px rgba(0,0,0,0.5); overflow-y: auto;
         }
         .sidebar-nav::-webkit-scrollbar { display: none; }
@@ -82,7 +89,7 @@
         .nav-item-special { margin-top: auto; margin-bottom: 10px; width: 85%; background-color: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); color: rgba(255, 255, 255, 0.8); }
         .nav-item-special:hover { background-color: rgba(0, 0, 0, 0.7); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
 
-        .sidebar-form { width: 400px; background-color: var(--matte-black); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; z-index: 2; }
+        .sidebar-form { width: 400px; background-color: var(--matte-black); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; z-index: 1001; }
         .form-header { padding: 30px 25px 15px 25px; }
         .form-scroll-area { flex: 1; overflow-y: auto; padding: 0 25px 30px 25px; }
         .form-scroll-area::-webkit-scrollbar { width: 4px; }
@@ -102,7 +109,7 @@
         .divider-title { color: var(--red-vivid); font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; grid-column: span 2; }
 
         /* AREA PRINCIPAL E TABELAS */
-        .main-panel { flex: 1; padding: 40px; overflow: hidden; display: flex; flex-direction: column; }
+        .main-panel { flex: 1; padding: 40px; overflow: hidden; display: flex; flex-direction: column; width: 100%; transition: padding 0.3s ease;}
         .header { display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 15px;}
         
@@ -142,8 +149,8 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 10000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
         .modal-overlay.active { opacity: 1; visibility: visible; }
 
-        .profile-modal-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 420px; box-shadow: 0 25px 60px rgba(0,0,0,0.8); }
-        .profile-modal-wrapper.large { width: 700px; }
+        .profile-modal-wrapper { position: relative; border-radius: 18px; padding: 2px; width: 420px; box-shadow: 0 25px 60px rgba(0,0,0,0.8); max-width: 95%; }
+        .profile-modal-wrapper.large { width: 700px; max-width: 95%; }
         .profile-modal-wrapper::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--red-dark), var(--red-vivid), var(--red-dark)); background-size: 200% 200%; animation: elegantPulse 4s ease infinite; border-radius: 18px; z-index: -1; }
         .profile-modal-content { background-color: var(--bg-panel); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
         
@@ -152,9 +159,15 @@
 
         .modal-cover { width: 100%; height: 130px; background-color: #333; position: relative; cursor: pointer; }
         .modal-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-cover::after { content: 'Alterar Capa'; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; color: #fff; font-size: 12px; font-weight: bold; opacity: 0; transition: opacity 0.3s; }
+        .modal-cover:hover::after { opacity: 1; }
+
         .modal-avatar-area { position: relative; height: 50px; }
         .modal-avatar-wrapper { position: absolute; bottom: -10px; left: 25px; width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--bg-panel); cursor: pointer; overflow: hidden; z-index: 2; background: #222; }
         .modal-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; background-color: #f3f3f3;}
+        .modal-avatar-wrapper::after { content: 'Trocar'; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; color: #fff; font-size: 11px; font-weight: bold; opacity: 0; transition: opacity 0.3s; }
+        .modal-avatar-wrapper:hover::after { opacity: 1; }
+
         .modal-body { padding: 20px 25px 30px 25px; overflow-y: auto;}
         .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
         .btn-cancel { background: #2a2a2a; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; text-transform: uppercase; font-size: 13px;}
@@ -165,7 +178,7 @@
         .status-ativo { background: #1db954; color: #fff; }
         .status-inativo { background: #e6193b; color: #fff; }
 
-        /* MODO DE EXPORTAÇÃO PDF PROFISSIONAL (Elegante e Colorido) */
+        /* MODO DE EXPORTAÇÃO PDF PROFISSIONAL */
         .pdf-header { display: none; }
         
         .pdf-export-mode {
@@ -180,7 +193,7 @@
             border-collapse: collapse !important;
             border: 1px solid #ddd !important;
             color: #000 !important;
-            font-size: 9px !important; /* Fonte ajustada para A2 */
+            font-size: 9px !important; 
             width: 100% !important;
             font-family: Arial, sans-serif !important;
         }
@@ -202,9 +215,7 @@
             text-align: center !important;
         }
 
-        .pdf-export-mode .data-table tr:nth-child(even) td {
-            background-color: #f9f9f9 !important;
-        }
+        .pdf-export-mode .data-table tr:nth-child(even) td { background-color: #f9f9f9 !important; }
         
         .pdf-export-mode .pdf-header {
             display: block !important;
@@ -222,9 +233,51 @@
         .chart-card { background: #161616; padding: 20px; border-radius: 12px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; align-items: center;}
         .chart-card h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; color: var(--text-muted); width: 100%; text-align: left;}
 
+        /* MEDIA QUERIES PARA CELULAR */
+        @media (max-width: 900px) {
+            .mobile-menu-toggle { display: flex; align-items: center; justify-content: center; }
+            .sidebar-nav, .sidebar-form { position: fixed; height: 100%; top: 0; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            
+            .sidebar-nav { left: 0; transform: translateX(-100%); z-index: 1002; }
+            .sidebar-form { left: 120px; width: calc(100vw - 120px); transform: translateX(-150%); z-index: 1001; }
+            
+            body.sidebar-open .mobile-backdrop { display: block; opacity: 1; }
+            body.sidebar-open .sidebar-nav { transform: translateX(0); }
+            body.sidebar-open .sidebar-form { transform: translateX(0); }
+            
+            .main-panel { padding: 80px 15px 20px 15px; } /* Espaço para o menu hambúrguer */
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .header h1 { font-size: 20px; }
+            .header-actions { width: 100%; justify-content: space-between; overflow-x: auto; padding-bottom: 5px;}
+            #dashboardCharts { grid-template-columns: 1fr !important; }
+            .form-scroll-area { padding-bottom: 80px; } /* Ajuste de scroll no mobile */
+        }
+
     </style>
 </head>
 <body>
+
+    <button class="mobile-menu-toggle" onclick="toggleMobileSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <div class="mobile-backdrop" onclick="toggleMobileSidebar()"></div>
+
+    <div id="cropperModal" class="modal-overlay" style="z-index: 10001;">
+        <div class="profile-modal-wrapper" style="width: 500px; max-width: 90%;">
+            <div class="profile-modal-content">
+                <div class="modal-header-custom" style="border-bottom: 2px solid var(--red-vivid);">
+                    <h3>Ajustar Imagem</h3>
+                </div>
+                <div class="modal-body" style="text-align: center; max-height: 50vh; background: #000; padding: 0;">
+                    <img id="imageToCrop" src="" style="max-width: 100%; display: block; margin: 0 auto;">
+                </div>
+                <div class="modal-actions" style="padding: 20px; margin-top: 0; background: var(--bg-panel);">
+                    <button type="button" class="btn-cancel" onclick="closeCropper()">Cancelar</button>
+                    <button type="button" class="btn-submit" onclick="applyCrop()" style="margin-top: 0;">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="customAlertBox" class="modal-overlay">
         <div class="profile-modal-wrapper" style="width: 320px;">
@@ -303,7 +356,7 @@
                     </div>
                     <div class="form-group full-width" style="margin-bottom: 5px;">
                         <label>Usuário de Acesso</label>
-                        <input type="text" id="profUser" class="form-input">
+                        <input type="text" id="profUser" class="form-input" disabled style="opacity: 0.6; cursor: not-allowed;">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="color: var(--red-vivid);">Senha Atual (P/ Confirmar)</label>
@@ -379,7 +432,7 @@
                         <label>Aviário</label>
                         <select id="dashFilterAviario" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Aviários</option></select>
                     </div>
-                    <button class="btn-submit full-width" onclick="updateDashboardPesoMachos()" style="margin-top:10px;">Atualizar Gráficos</button>
+                    <button class="btn-submit full-width" onclick="updateDashboardPesoMachos(); toggleMobileSidebar();" style="margin-top:10px;">Atualizar Gráficos</button>
                 </div>
             </div>
         </div>
@@ -772,12 +825,22 @@
         const database = firebase.database();
         const storage = firebase.storage();
 
-        // --- VARIÁVEIS GLOBAIS DE AUTENTICAÇÃO ---
+        // --- VARIÁVEIS GLOBAIS ---
         let loggedUser = null;
         let loggedUserName = "Visitante";
         let loggedUserType = ""; 
+        
+        let cropper = null;
+        let currentCropType = ''; // 'avatar' ou 'cover'
+        let pendingAvatarDataUrl = null;
+        let pendingCoverDataUrl = null;
 
-        // Função de Alerta Customizado
+        // --- SISTEMA MOBILE RESPONSIVO ---
+        function toggleMobileSidebar() {
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        // --- ALERTAS ---
         function showCustomAlert(message, title = "Aviso") {
             document.getElementById('alertTitle').innerText = title;
             document.getElementById('alertMessage').innerText = message;
@@ -947,23 +1010,74 @@
             html2pdf().set(opt).from(element).save().then(() => { element.classList.remove('pdf-export-mode'); });
         }
 
-        // --- PERFIL E MODAL ---
+        // --- CROPPER & PERFIL ---
         const profileModal = document.getElementById('profileModal');
-        let pendingAvatarFile = null; 
-        let pendingCoverFile = null;
-        
+        const cropperModal = document.getElementById('cropperModal');
+        const imageToCrop = document.getElementById('imageToCrop');
+
         function openModal() { 
             profileModal.classList.add('active'); 
             document.getElementById('profCurrentPass').value = ''; 
             document.getElementById('profNewPass').value = ''; 
-            pendingAvatarFile = null; 
-            pendingCoverFile = null;
+            pendingAvatarDataUrl = null; 
+            pendingCoverDataUrl = null;
         }
         
         function closeModal() { 
             profileModal.classList.remove('active'); 
-            pendingAvatarFile = null;
-            pendingCoverFile = null;
+        }
+
+        function initCrop(file, type) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imageToCrop.src = e.target.result;
+                currentCropType = type;
+                cropperModal.classList.add('active');
+                
+                if (cropper) { cropper.destroy(); }
+                
+                cropper = new Cropper(imageToCrop, {
+                    aspectRatio: type === 'avatar' ? 1 : 16 / 9,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    background: false
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('avatarInput').addEventListener('change', function(e) {
+            if(e.target.files && e.target.files[0]) { initCrop(e.target.files[0], 'avatar'); }
+            this.value = ''; // Reset
+        });
+
+        document.getElementById('coverInput').addEventListener('change', function(e) {
+            if(e.target.files && e.target.files[0]) { initCrop(e.target.files[0], 'cover'); }
+            this.value = ''; // Reset
+        });
+
+        function closeCropper() {
+            cropperModal.classList.remove('active');
+            if(cropper) { cropper.destroy(); cropper = null; }
+        }
+
+        function applyCrop() {
+            if(!cropper) return;
+            const canvas = cropper.getCroppedCanvas({
+                width: currentCropType === 'avatar' ? 400 : 1200,
+                height: currentCropType === 'avatar' ? 400 : 675
+            });
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            
+            if(currentCropType === 'avatar') {
+                pendingAvatarDataUrl = dataUrl;
+                document.getElementById('avatarPreview').src = dataUrl;
+            } else {
+                pendingCoverDataUrl = dataUrl;
+                document.getElementById('coverPreview').src = dataUrl;
+            }
+            closeCropper();
         }
 
         async function saveProfile() { 
@@ -972,21 +1086,50 @@
             btnSave.disabled = true;
 
             const novoNome = document.getElementById('profName').value;
+            const senhaAtual = document.getElementById('profCurrentPass').value;
+            const novaSenha = document.getElementById('profNewPass').value;
 
-            // Atualiza UI Imediatamente
-            document.getElementById('sidebarProfilePic').src = document.getElementById('avatarPreview').src;
+            // Update UI Imediatamente
+            if(pendingAvatarDataUrl) document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
             loggedUserName = novoNome;
             
             if(loggedUser) {
-                database.ref('users/' + loggedUser).update({
-                    nome: novoNome
-                }).then(() => {
+                try {
+                    let updates = { nome: novoNome };
+
+                    // Firebase Storage Upload
+                    if (pendingAvatarDataUrl) {
+                        const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
+                        await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
+                        updates.avatarUrl = await avatarRef.getDownloadURL();
+                    }
+                    if (pendingCoverDataUrl) {
+                        const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
+                        await coverRef.putString(pendingCoverDataUrl, 'data_url');
+                        updates.coverUrl = await coverRef.getDownloadURL();
+                    }
+
+                    // Se preencheu as senhas, validar antes de salvar
+                    if(senhaAtual || novaSenha) {
+                        const snapshot = await database.ref('users/' + loggedUser).once('value');
+                        const dbPass = snapshot.val().senha;
+                        if(senhaAtual !== dbPass) {
+                            showCustomAlert('A senha atual informada está incorreta.', 'Erro');
+                            throw new Error('Senha incorreta');
+                        }
+                        if(novaSenha) { updates.senha = novaSenha; }
+                    }
+
+                    await database.ref('users/' + loggedUser).update(updates);
                     showCustomAlert('Perfil salvo com sucesso!', 'Sucesso');
                     closeModal();
-                }).finally(() => {
+
+                } catch (error) {
+                    console.error(error);
+                } finally {
                     btnSave.innerText = "Salvar Perfil";
                     btnSave.disabled = false;
-                });
+                }
             } else {
                 closeModal();
                 btnSave.innerText = "Salvar Perfil";
@@ -1014,6 +1157,9 @@
                     tableView.style.display = 'flex';
                     if(tabName === 'dashboard') updateDashboardPesoMachos();
                 }
+
+                // Fecha menu no mobile ao clicar em uma aba
+                if(window.innerWidth <= 900) { toggleMobileSidebar(); }
             });
         });
 
@@ -1207,8 +1353,7 @@
         });
 
         function updateDashboardPesoMachos() {
-            // Placeholder para atualizar os gráficos 
-            // Essa função é chamada ao logar, trocar de tela e alterar filtros
+            // Placeholder para atualizar os gráficos
         }
 
         // Inicializar a tela primária
