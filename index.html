@@ -86,26 +86,32 @@
         }
         .sidebar-nav::-webkit-scrollbar { display: none; }
 
-        /* ANIMAÇÃO DAS BORDAS DE PERFIL */
-        @keyframes borderGoldPulse {
-            0% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; }
-            50% { box-shadow: 0 0 15px #ffaa00, inset 0 0 8px #ffaa00; border-color: #ffb700; }
-            100% { box-shadow: 0 0 5px #ffd700, inset 0 0 5px #ffd700; border-color: #ffd700; }
-        }
-        @keyframes borderSilverPulse {
-            0% { box-shadow: 0 0 5px #c0c0c0, inset 0 0 5px #c0c0c0; border-color: #c0c0c0; }
-            50% { box-shadow: 0 0 15px #ffffff, inset 0 0 8px #ffffff; border-color: #ffffff; }
-            100% { box-shadow: 0 0 5px #c0c0c0, inset 0 0 5px #c0c0c0; border-color: #c0c0c0; }
+        /* ANIMAÇÃO DAS BORDAS DE PERFIL CIRÚRGICA */
+        @keyframes spinBorder {
+            100% { transform: rotate(360deg); }
         }
 
         .nav-profile {
-            width: 65px; height: 65px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); margin-bottom: 30px;
-            cursor: pointer; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: transform 0.3s ease; background-color: #222;
+            width: 65px; height: 65px; border-radius: 50%;
+            margin-bottom: 30px; cursor: pointer; position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: transform 0.3s ease;
+            display: flex; justify-content: center; align-items: center;
+            background: transparent; border: none;
         }
         .nav-profile:hover { transform: scale(1.05); }
-        .nav-profile.role-ouro { animation: borderGoldPulse 2.5s infinite ease-in-out; border-width: 2px; }
-        .nav-profile.role-prata { animation: borderSilverPulse 2.5s infinite ease-in-out; border-width: 2px; }
-        .nav-profile img { width: 100%; height: 100%; object-fit: cover; }
+        .nav-profile img { width: 57px; height: 57px; border-radius: 50%; object-fit: cover; z-index: 2; background: #222; }
+        .nav-profile.role-ouro { --glow-color: #ffd700; }
+        .nav-profile.role-prata { --glow-color: #ffffff; }
+        
+        .nav-profile.anim-active::before {
+            content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
+            background: conic-gradient(transparent 20%, var(--glow-color) 100%);
+            animation: spinBorder 2s linear infinite; z-index: 1;
+        }
+        .nav-profile.anim-active::after {
+            content: ''; position: absolute; width: 57px; height: 57px; border-radius: 50%;
+            background: var(--bg-panel); z-index: 1;
+        }
 
         .nav-item {
             width: 100%; padding: 15px 0; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
@@ -169,11 +175,14 @@
         
         .action-col { display: none; }
         .edit-mode .action-col { display: table-cell; }
-        .edit-mode td:not(.action-col) { cursor: text; background-color: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.1); }
-        .edit-mode td:not(.action-col):focus { outline: 2px solid var(--red-vivid); background-color: #1a1a1a; color: #fff; }
+        .edit-mode tr { cursor: move; }
+        .edit-mode td[contenteditable="true"] { cursor: text; background-color: rgba(255, 255, 255, 0.05); border: 1px dashed rgba(255, 255, 255, 0.2); }
+        .edit-mode td[contenteditable="true"]:focus { outline: 2px solid var(--red-vivid); background-color: #1a1a1a; color: #fff; }
 
         .btn-delete { background-color: #333; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
         .btn-delete:hover { background-color: #ff4d4d; color: #fff; }
+        .btn-save { background-color: #1db954; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; margin-right: 5px; }
+        .btn-save:hover { background-color: #1ed760; }
 
         /* MODAIS CUSTOMIZADOS */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 10000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
@@ -401,6 +410,11 @@
                     <div class="form-group" style="margin-bottom: 0;">
                         <label>Nova Senha (Opcional)</label>
                         <input type="password" id="profNewPass" class="form-input" placeholder="Deixe em branco p/ manter">
+                    </div>
+                    <div class="form-group full-width" style="margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; text-transform: none;">
+                            <input type="checkbox" id="profAnim" checked> Ativar animação circular no perfil
+                        </label>
                     </div>
                     <div class="full-width modal-actions">
                         <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
@@ -872,13 +886,17 @@
         let loggedUserType = ""; 
         
         let cropper = null;
-        let currentCropType = ''; // 'avatar' ou 'cover'
+        let currentCropType = ''; 
         let pendingAvatarDataUrl = null;
         let pendingCoverDataUrl = null;
 
-        // Controle de Sessão e Inatividade
-        const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 minutos
+        const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; 
         let inactivityInterval;
+
+        function applyCacheBuster(url) {
+            if(!url) return url;
+            return url.includes('?') ? url + '&cb=' + Date.now() : url + '?cb=' + Date.now();
+        }
 
         // --- SISTEMA MOBILE RESPONSIVO ---
         function toggleMobileSidebar() {
@@ -907,7 +925,6 @@
             }
         }
 
-        // Registra atividade para não deslogar
         function resetInactivityTimer() {
             if (loggedUser) {
                 localStorage.setItem('lastActivity', Date.now());
@@ -915,7 +932,6 @@
         }
 
         function startInactivityCheck() {
-            // Mapeia eventos para resetar o tempo de inatividade
             ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
                 document.addEventListener(evt, resetInactivityTimer);
             });
@@ -927,7 +943,7 @@
                     showCustomAlert("Sua sessão expirou devido a 10 minutos de inatividade.", "Sessão Expirada");
                     logout();
                 }
-            }, 30000); // Verifica a cada 30 segundos
+            }, 30000); 
         }
 
         function logout() {
@@ -965,7 +981,8 @@
                         nome: nome,
                         senha: pass,
                         tipo: type,
-                        status: 'Pendente'
+                        status: 'Pendente',
+                        animacaoPerfil: true
                     }).then(() => {
                         showCustomAlert('Seu cadastro está em análise esperando autorização do administrador.', 'Sucesso!');
                         document.getElementById('registerForm').reset();
@@ -982,14 +999,10 @@
 
             if (user.toUpperCase() === 'DESENVOLVEDOR' && pass === '1709') { 
                 database.ref('users/DESENVOLVEDOR').once('value').then((snap) => {
-                    if (snap.exists()) {
-                        const d = snap.val();
-                        loginSuccess('DESENVOLVEDOR', d.nome || 'Marcos Valério (Dev)', 'desenvolvedor', d.avatarUrl, d.coverUrl, false);
-                    } else {
-                        loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor', null, null, false);
-                    }
+                    let d = snap.val() || { nome: 'Marcos Valério (Dev)', tipo: 'desenvolvedor', animacaoPerfil: true };
+                    loginSuccess('DESENVOLVEDOR', d, false);
                 }).catch(() => {
-                    loginSuccess('DESENVOLVEDOR', 'Marcos Valério (Dev)', 'desenvolvedor', null, null, false);
+                    loginSuccess('DESENVOLVEDOR', { nome: 'Marcos Valério (Dev)', tipo: 'desenvolvedor', animacaoPerfil: true }, false);
                 });
             } else {
                 database.ref('users/' + user).once('value').then((snapshot) => {
@@ -997,7 +1010,7 @@
                         const userData = snapshot.val();
                         if (userData.senha === pass) {
                             if (userData.status === 'Ativo') {
-                                loginSuccess(user, userData.nome, userData.tipo, userData.avatarUrl, userData.coverUrl, false);
+                                loginSuccess(user, userData, false);
                             } else if (userData.status === 'Pendente') {
                                 showCustomAlert('Sua conta ainda está em análise pelo administrador.', 'Acesso Negado');
                                 document.getElementById('loginForm').reset();
@@ -1019,45 +1032,62 @@
             }
         });
 
-        function loginSuccess(username, fullname, type, avatarUrl, coverUrl, isRestoreSession) {
+        function loginSuccess(username, userData, isRestoreSession) {
             loggedUser = username;
-            loggedUserName = fullname;
-            loggedUserType = type;
+            loggedUserName = userData.nome || userData.fullname;
+            loggedUserType = userData.tipo || userData.type;
             
-            // Salva a sessão no LocalStorage para auto-login depois
+            let avatarUrl = userData.avatarUrl;
+            let coverUrl = userData.coverUrl;
+            let animacaoAtiva = userData.animacaoPerfil !== false; 
+            
             localStorage.setItem('sessionData', JSON.stringify({
-                username, fullname, type, avatarUrl, coverUrl
+                username, fullname: loggedUserName, type: loggedUserType, 
+                avatarUrl, coverUrl, animacaoPerfil: animacaoAtiva
             }));
             resetInactivityTimer();
 
-            document.getElementById('profName').value = fullname;
+            document.getElementById('profName').value = loggedUserName;
             document.getElementById('profUser').value = username;
+            document.getElementById('profAnim').checked = animacaoAtiva;
             
             if(avatarUrl) {
-                document.getElementById('sidebarProfilePic').src = avatarUrl;
-                document.getElementById('avatarPreview').src = avatarUrl;
+                const safeUrl = applyCacheBuster(avatarUrl);
+                document.getElementById('sidebarProfilePic').src = safeUrl;
+                document.getElementById('avatarPreview').src = safeUrl;
+            } else {
+                const defaultSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+                document.getElementById('sidebarProfilePic').src = defaultSvg;
+                document.getElementById('avatarPreview').src = defaultSvg;
             }
             if(coverUrl) {
-                document.getElementById('coverPreview').src = coverUrl;
+                const safeUrl = applyCacheBuster(coverUrl);
+                document.getElementById('coverPreview').src = safeUrl;
+            } else {
+                document.getElementById('coverPreview').src = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1000&auto=format&fit=crop";
             }
 
-            // AJUSTE CIRÚRGICO: Define a borda animada de acordo com a função
             const navProfile = document.querySelector('.nav-profile');
             navProfile.classList.remove('role-ouro', 'role-prata');
-            if(type === 'admin' || type === 'desenvolvedor') {
+            if(loggedUserType === 'admin' || loggedUserType === 'desenvolvedor') {
                 document.getElementById('btn-acessos').style.display = 'block';
                 navProfile.classList.add('role-ouro');
             } else {
                 document.getElementById('btn-acessos').style.display = 'none';
                 navProfile.classList.add('role-prata');
             }
+            
+            if(animacaoAtiva) {
+                navProfile.classList.add('anim-active');
+            } else {
+                navProfile.classList.remove('anim-active');
+            }
 
             const loginScreen = document.getElementById('login-screen');
             const welcomeScreen = document.getElementById('welcome-screen');
             
             if (!isRestoreSession) {
-                // Ajuste Cirúrgico: Tela de Bem vindo somente em login explícito
-                document.getElementById('welcomeName').innerText = "Bem Vindo, " + fullname;
+                document.getElementById('welcomeName').innerText = "Bem Vindo, " + loggedUserName;
                 loginScreen.style.opacity = '0';
                 
                 setTimeout(() => { 
@@ -1066,7 +1096,7 @@
                     
                     setTimeout(() => {
                         welcomeScreen.classList.remove('active');
-                    }, 2000); // Exibe por 2 segundos
+                    }, 2000); 
                 }, 500);
             } else {
                 loginScreen.style.display = 'none';
@@ -1084,12 +1114,11 @@
             if (sessionDataStr) {
                 if (Date.now() - lastActivity < INACTIVITY_LIMIT_MS) {
                     const data = JSON.parse(sessionDataStr);
-                    loginSuccess(data.username, data.fullname, data.type, data.avatarUrl, data.coverUrl, true);
+                    loginSuccess(data.username, data, true);
                 } else {
-                    logout(); // Passou de 10 min de inatividade
+                    logout(); 
                 }
             }
-            // Inicializar a tela primária por baixo dos panos
             document.getElementById('tab-matriz').click();
         };
 
@@ -1199,12 +1228,12 @@
 
         document.getElementById('avatarInput').addEventListener('change', function(e) {
             if(e.target.files && e.target.files[0]) { initCrop(e.target.files[0], 'avatar'); }
-            this.value = ''; // Reset
+            this.value = ''; 
         });
 
         document.getElementById('coverInput').addEventListener('change', function(e) {
             if(e.target.files && e.target.files[0]) { initCrop(e.target.files[0], 'cover'); }
-            this.value = ''; // Reset
+            this.value = ''; 
         });
 
         function closeCropper() {
@@ -1239,29 +1268,37 @@
             const novoNome = document.getElementById('profName').value;
             const senhaAtual = document.getElementById('profCurrentPass').value;
             const novaSenha = document.getElementById('profNewPass').value;
+            const animacaoAtiva = document.getElementById('profAnim').checked;
 
             try {
                 if(loggedUser) {
-                    let updates = { nome: novoNome };
+                    let updates = { 
+                        nome: novoNome,
+                        animacaoPerfil: animacaoAtiva 
+                    };
 
                     if (pendingAvatarDataUrl) {
-                        document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
                         try {
                             const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
                             await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
                             updates.avatarUrl = await avatarRef.getDownloadURL();
+                            const safeUrl = applyCacheBuster(updates.avatarUrl);
+                            document.getElementById('sidebarProfilePic').src = safeUrl;
+                            document.getElementById('avatarPreview').src = safeUrl;
                         } catch(err) {
                             updates.avatarUrl = pendingAvatarDataUrl; 
+                            document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
                         }
                     }
                     if (pendingCoverDataUrl) {
-                        document.getElementById('coverPreview').src = pendingCoverDataUrl;
                         try {
                             const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
                             await coverRef.putString(pendingCoverDataUrl, 'data_url');
                             updates.coverUrl = await coverRef.getDownloadURL();
+                            document.getElementById('coverPreview').src = applyCacheBuster(updates.coverUrl);
                         } catch(err) {
                             updates.coverUrl = pendingCoverDataUrl; 
+                            document.getElementById('coverPreview').src = pendingCoverDataUrl;
                         }
                     }
 
@@ -1279,13 +1316,17 @@
                     await database.ref('users/' + loggedUser).update(updates);
                     loggedUserName = novoNome;
                     
-                    // Atualiza cache de sessão com os novos dados do perfil
                     const currentSession = JSON.parse(localStorage.getItem('sessionData') || '{}');
                     currentSession.fullname = novoNome;
+                    currentSession.animacaoPerfil = animacaoAtiva;
                     if(updates.avatarUrl) currentSession.avatarUrl = updates.avatarUrl;
                     if(updates.coverUrl) currentSession.coverUrl = updates.coverUrl;
                     localStorage.setItem('sessionData', JSON.stringify(currentSession));
                     
+                    const navProfile = document.querySelector('.nav-profile');
+                    if(animacaoAtiva) navProfile.classList.add('anim-active');
+                    else navProfile.classList.remove('anim-active');
+
                     showCustomAlert('Perfil salvo com sucesso!', 'Sucesso');
                     closeModal(); 
                 } else {
@@ -1327,6 +1368,57 @@
             });
         });
 
+        // --- ARRASTAR E SOLTAR (DRAG & DROP) PARA ORDENAÇÃO ---
+        let dragSrcEl = null;
+        function handleDragStart(e) {
+            if(!this.closest('.edit-mode')) return;
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.style.opacity = '0.5';
+        }
+        function handleDragOver(e) {
+            if(!this.closest('.edit-mode')) return;
+            if (e.preventDefault) { e.preventDefault(); }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+        function handleDrop(e, path) {
+            if (e.stopPropagation) { e.stopPropagation(); }
+            if(!this.closest('.edit-mode')) return;
+            if (dragSrcEl !== this) {
+                const srcKey = dragSrcEl.getAttribute('data-key');
+                const tgtKey = this.getAttribute('data-key');
+                let srcOrdem = Number(dragSrcEl.getAttribute('data-ordem') || 0);
+                let tgtOrdem = Number(this.getAttribute('data-ordem') || 0);
+                
+                if (srcOrdem === tgtOrdem) { srcOrdem += 1; }
+
+                database.ref(`${path}/${srcKey}`).update({ordem: tgtOrdem});
+                database.ref(`${path}/${tgtKey}`).update({ordem: srcOrdem});
+            }
+            return false;
+        }
+        function handleDragEnd(e) {
+            if(this.closest('.edit-mode')) this.style.opacity = '1';
+        }
+
+        // --- SALVAR EDIÇÃO INLINE ---
+        function saveRow(path, key, btn) {
+            const tr = btn.closest('tr');
+            const cells = tr.querySelectorAll('td[data-field]');
+            const updates = {};
+            cells.forEach(c => {
+                updates[c.getAttribute('data-field')] = c.innerText.trim();
+            });
+            
+            database.ref(`${path}/${key}`).update(updates).then(() => {
+                showCustomAlert('Linha atualizada com sucesso!', 'Sucesso');
+            }).catch(err => {
+                showCustomAlert('Erro ao atualizar: ' + err.message, 'Erro');
+            });
+        }
+
         // --- FIREBASE CRUD LOGIC PARA FORMULÁRIOS ---
         function getFormData(formId) {
             const form = document.getElementById(formId);
@@ -1343,12 +1435,22 @@
             }
         }
 
+        // Re-aplica estado de edição ao redesenhar a tabela
+        function restoreEditState(tbodyId) {
+            const tbody = document.getElementById(tbodyId);
+            const tableContainer = tbody.closest('.table-container');
+            if(tableContainer && tableContainer.classList.contains('edit-mode')) {
+                tbody.querySelectorAll('td[data-field]').forEach(td => td.setAttribute('contenteditable', 'true'));
+            }
+        }
+
         // MATRIZ
         document.getElementById('cadastroMatrizForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const data = getFormData('cadastroMatrizForm');
             data.tecnico = loggedUserName;
             data.userId = loggedUser; 
+            data.ordem = Date.now();
             
             database.ref('matriz').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
@@ -1356,7 +1458,7 @@
             });
         });
 
-        database.ref('matriz').on('value', (snapshot) => {
+        database.ref('matriz').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             snapshot.forEach(child => {
@@ -1364,28 +1466,30 @@
                 
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
-                let tr = `<tr>
-                    <td>${d.tecnico || '-'}</td><td>${d.c_data || '-'}</td><td>${d.c_lote || '-'}</td>
-                    <td>-</td><td>-</td><td>-</td><td>${d.c_semana || '-'}</td><td>${d.c_aviario || '-'}</td>
-                    <td>${d.c_producao || '-'}</td><td>${d.c_quebrados || '-'}</td><td>${d.c_trincados || '-'}</td>
-                    <td>${d.c_deformados || '-'}</td><td>${d.c_duasgemas || '-'}</td><td>${d.c_pequenos || '-'}</td>
-                    <td>${d.c_sujoscama || '-'}</td><td>${d.c_sujosninho || '-'}</td><td>${d.c_sujosdescartes || '-'}</td>
-                    <td>${d.c_ovoscomercio || '-'}</td><td>${d.c_ovoslimpos || '-'}</td><td>${d.c_ovosincubatorio || '-'}</td>
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'matriz')" ondragend="handleDragEnd.call(this, event)">
+                    <td>${d.tecnico || '-'}</td>
+                    <td data-field="c_data">${d.c_data || '-'}</td><td data-field="c_lote">${d.c_lote || '-'}</td>
+                    <td>-</td><td>-</td><td>-</td><td data-field="c_semana">${d.c_semana || '-'}</td><td data-field="c_aviario">${d.c_aviario || '-'}</td>
+                    <td data-field="c_producao">${d.c_producao || '-'}</td><td data-field="c_quebrados">${d.c_quebrados || '-'}</td><td data-field="c_trincados">${d.c_trincados || '-'}</td>
+                    <td data-field="c_deformados">${d.c_deformados || '-'}</td><td data-field="c_duasgemas">${d.c_duasgemas || '-'}</td><td data-field="c_pequenos">${d.c_pequenos || '-'}</td>
+                    <td data-field="c_sujoscama">${d.c_sujoscama || '-'}</td><td data-field="c_sujosninho">${d.c_sujosninho || '-'}</td><td data-field="c_sujosdescartes">${d.c_sujosdescartes || '-'}</td>
+                    <td data-field="c_ovoscomercio">${d.c_ovoscomercio || '-'}</td><td data-field="c_ovoslimpos">${d.c_ovoslimpos || '-'}</td><td data-field="c_ovosincubatorio">${d.c_ovosincubatorio || '-'}</td>
                     <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                    <td>${d.f_b1||'-'}</td><td>${d.f_q1||'-'}</td><td>${d.f_b2||'-'}</td><td>${d.f_q2||'-'}</td>
-                    <td>${d.f_b3||'-'}</td><td>${d.f_q3||'-'}</td><td>${d.f_b4||'-'}</td><td>${d.f_q4||'-'}</td>
-                    <td>${d.f_b5||'-'}</td><td>${d.f_q5||'-'}</td><td>${d.f_b6||'-'}</td><td>${d.f_q6||'-'}</td>
-                    <td>${d.f_b7||'-'}</td><td>${d.f_q7||'-'}</td><td>${d.f_b8||'-'}</td><td>${d.f_q8||'-'}</td>
+                    <td data-field="f_b1">${d.f_b1||'-'}</td><td data-field="f_q1">${d.f_q1||'-'}</td><td data-field="f_b2">${d.f_b2||'-'}</td><td data-field="f_q2">${d.f_q2||'-'}</td>
+                    <td data-field="f_b3">${d.f_b3||'-'}</td><td data-field="f_q3">${d.f_q3||'-'}</td><td data-field="f_b4">${d.f_b4||'-'}</td><td data-field="f_q4">${d.f_q4||'-'}</td>
+                    <td data-field="f_b5">${d.f_b5||'-'}</td><td data-field="f_q5">${d.f_q5||'-'}</td><td data-field="f_b6">${d.f_b6||'-'}</td><td data-field="f_q6">${d.f_q6||'-'}</td>
+                    <td data-field="f_b7">${d.f_b7||'-'}</td><td data-field="f_q7">${d.f_q7||'-'}</td><td data-field="f_b8">${d.f_b8||'-'}</td><td data-field="f_q8">${d.f_q8||'-'}</td>
                     <td>-</td><td>-</td><td>-</td><td>-</td>
-                    <td>${d.m_b1||'-'}</td><td>${d.m_q1||'-'}</td><td>${d.m_b2||'-'}</td><td>${d.m_q2||'-'}</td>
-                    <td>${d.m_b3||'-'}</td><td>${d.m_q3||'-'}</td><td>${d.m_b4||'-'}</td><td>${d.m_q4||'-'}</td>
-                    <td>${d.m_b5||'-'}</td><td>${d.m_q5||'-'}</td><td>${d.m_b6||'-'}</td><td>${d.m_q6||'-'}</td>
-                    <td>${d.m_b7||'-'}</td><td>${d.m_q7||'-'}</td><td>${d.m_b8||'-'}</td><td>${d.m_q8||'-'}</td>
+                    <td data-field="m_b1">${d.m_b1||'-'}</td><td data-field="m_q1">${d.m_q1||'-'}</td><td data-field="m_b2">${d.m_b2||'-'}</td><td data-field="m_q2">${d.m_q2||'-'}</td>
+                    <td data-field="m_b3">${d.m_b3||'-'}</td><td data-field="m_q3">${d.m_q3||'-'}</td><td data-field="m_b4">${d.m_b4||'-'}</td><td data-field="m_q4">${d.m_q4||'-'}</td>
+                    <td data-field="m_b5">${d.m_b5||'-'}</td><td data-field="m_q5">${d.m_q5||'-'}</td><td data-field="m_b6">${d.m_b6||'-'}</td><td data-field="m_q6">${d.m_q6||'-'}</td>
+                    <td data-field="m_b7">${d.m_b7||'-'}</td><td data-field="m_q7">${d.m_q7||'-'}</td><td data-field="m_b8">${d.m_b8||'-'}</td><td data-field="m_q8">${d.m_q8||'-'}</td>
                     <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('matriz/${child.key}')">Excluir</button></td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('matriz', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('matriz/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
+            restoreEditState('tableBody');
         });
 
         // PESO FÊMEAS
@@ -1394,6 +1498,7 @@
             const data = getFormData('cadastroPesoFemeasForm');
             data.tecnico = loggedUserName;
             data.userId = loggedUser; 
+            data.ordem = Date.now();
             
             database.ref('peso_femeas').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
@@ -1401,7 +1506,7 @@
             });
         });
 
-        database.ref('peso_femeas').on('value', (snapshot) => {
+        database.ref('peso_femeas').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBodyPesoFemeas');
             tbody.innerHTML = '';
             snapshot.forEach(child => {
@@ -1409,20 +1514,21 @@
                 
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
-                let tr = `<tr>
-                    <td>${d.tecnico || '-'}</td><td>${d.pf_data || '-'}</td><td>-</td><td>-</td>
-                    <td>${d.pf_granja || '-'}</td><td>${d.pf_lote || '-'}</td><td>${d.pf_aviario || '-'}</td><td>${d.pf_semana || '-'}</td>
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'peso_femeas')" ondragend="handleDragEnd.call(this, event)">
+                    <td>${d.tecnico || '-'}</td><td data-field="pf_data">${d.pf_data || '-'}</td><td>-</td><td>-</td>
+                    <td data-field="pf_granja">${d.pf_granja || '-'}</td><td data-field="pf_lote">${d.pf_lote || '-'}</td><td data-field="pf_aviario">${d.pf_aviario || '-'}</td><td data-field="pf_semana">${d.pf_semana || '-'}</td>
                     <td>-</td>
-                    <td>${d.pf_p1||'-'}</td><td>${d.pf_u1||'-'}</td><td>${d.pf_p2||'-'}</td><td>${d.pf_u2||'-'}</td>
-                    <td>${d.pf_p3||'-'}</td><td>${d.pf_u3||'-'}</td><td>${d.pf_p4||'-'}</td><td>${d.pf_u4||'-'}</td>
-                    <td>${d.pf_p5||'-'}</td><td>${d.pf_u5||'-'}</td><td>${d.pf_p6||'-'}</td><td>${d.pf_u6||'-'}</td>
-                    <td>${d.pf_p7||'-'}</td><td>${d.pf_u7||'-'}</td><td>${d.pf_p8||'-'}</td><td>${d.pf_u8||'-'}</td>
-                    <td>-</td><td>${d.pf_gad_real||'-'}</td><td>-</td><td>-</td>
-                    <td>${d.pf_meta||'-'}</td><td>${d.pf_real||'-'}</td><td>${d.pf_m_meta||'-'}</td><td>${d.pf_m_real||'-'}</td><td>-</td>
-                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('peso_femeas/${child.key}')">Excluir</button></td>
+                    <td data-field="pf_p1">${d.pf_p1||'-'}</td><td data-field="pf_u1">${d.pf_u1||'-'}</td><td data-field="pf_p2">${d.pf_p2||'-'}</td><td data-field="pf_u2">${d.pf_u2||'-'}</td>
+                    <td data-field="pf_p3">${d.pf_p3||'-'}</td><td data-field="pf_u3">${d.pf_u3||'-'}</td><td data-field="pf_p4">${d.pf_p4||'-'}</td><td data-field="pf_u4">${d.pf_u4||'-'}</td>
+                    <td data-field="pf_p5">${d.pf_p5||'-'}</td><td data-field="pf_u5">${d.pf_u5||'-'}</td><td data-field="pf_p6">${d.pf_p6||'-'}</td><td data-field="pf_u6">${d.pf_u6||'-'}</td>
+                    <td data-field="pf_p7">${d.pf_p7||'-'}</td><td data-field="pf_u7">${d.pf_u7||'-'}</td><td data-field="pf_p8">${d.pf_p8||'-'}</td><td data-field="pf_u8">${d.pf_u8||'-'}</td>
+                    <td>-</td><td data-field="pf_gad_real">${d.pf_gad_real||'-'}</td><td>-</td><td>-</td>
+                    <td data-field="pf_meta">${d.pf_meta||'-'}</td><td data-field="pf_real">${d.pf_real||'-'}</td><td data-field="pf_m_meta">${d.pf_m_meta||'-'}</td><td data-field="pf_m_real">${d.pf_m_real||'-'}</td><td>-</td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('peso_femeas', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('peso_femeas/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
+            restoreEditState('tableBodyPesoFemeas');
         });
 
         // PESO MACHOS
@@ -1431,6 +1537,7 @@
             const data = getFormData('cadastroPesoMachosForm');
             data.tecnico = loggedUserName;
             data.userId = loggedUser; 
+            data.ordem = Date.now();
             
             database.ref('peso_machos').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
@@ -1438,7 +1545,7 @@
             });
         });
 
-        database.ref('peso_machos').on('value', (snapshot) => {
+        database.ref('peso_machos').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBodyPesoMachos');
             tbody.innerHTML = '';
             snapshot.forEach(child => {
@@ -1446,23 +1553,24 @@
                 
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
 
-                let tr = `<tr>
-                    <td>${d.tecnico || '-'}</td><td>${d.pm_data || '-'}</td><td>-</td><td>-</td>
-                    <td>${d.pm_granja || '-'}</td><td>${d.pm_lote || '-'}</td><td>${d.pm_aviario || '-'}</td><td>${d.pm_semana || '-'}</td>
-                    <td>-</td><td>${d.pm_peso_medio||'-'}</td><td>${d.pm_uni||'-'}</td>
-                    <td>${d.pm_b1||'-'}</td><td>${d.pm_cv1||'-'}</td><td>${d.pm_u1||'-'}</td><td>${d.pm_g1||'-'}</td>
-                    <td>${d.pm_b2||'-'}</td><td>${d.pm_cv2||'-'}</td><td>${d.pm_u2||'-'}</td><td>${d.pm_g2||'-'}</td>
-                    <td>${d.pm_b3||'-'}</td><td>${d.pm_cv3||'-'}</td><td>${d.pm_u3||'-'}</td><td>${d.pm_g3||'-'}</td>
-                    <td>${d.pm_b4||'-'}</td><td>${d.pm_cv4||'-'}</td><td>${d.pm_u4||'-'}</td><td>${d.pm_g4||'-'}</td>
-                    <td>${d.pm_b5||'-'}</td><td>${d.pm_cv5||'-'}</td><td>${d.pm_u5||'-'}</td><td>${d.pm_g5||'-'}</td>
-                    <td>${d.pm_b6||'-'}</td><td>${d.pm_cv6||'-'}</td><td>${d.pm_u6||'-'}</td><td>${d.pm_g6||'-'}</td>
-                    <td>${d.pm_b7||'-'}</td><td>${d.pm_cv7||'-'}</td><td>${d.pm_u7||'-'}</td><td>${d.pm_g7||'-'}</td>
-                    <td>${d.pm_b8||'-'}</td><td>${d.pm_cv8||'-'}</td><td>${d.pm_u8||'-'}</td><td>${d.pm_g8||'-'}</td>
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'peso_machos')" ondragend="handleDragEnd.call(this, event)">
+                    <td>${d.tecnico || '-'}</td><td data-field="pm_data">${d.pm_data || '-'}</td><td>-</td><td>-</td>
+                    <td data-field="pm_granja">${d.pm_granja || '-'}</td><td data-field="pm_lote">${d.pm_lote || '-'}</td><td data-field="pm_aviario">${d.pm_aviario || '-'}</td><td data-field="pm_semana">${d.pm_semana || '-'}</td>
+                    <td>-</td><td data-field="pm_peso_medio">${d.pm_peso_medio||'-'}</td><td data-field="pm_uni">${d.pm_uni||'-'}</td>
+                    <td data-field="pm_b1">${d.pm_b1||'-'}</td><td data-field="pm_cv1">${d.pm_cv1||'-'}</td><td data-field="pm_u1">${d.pm_u1||'-'}</td><td data-field="pm_g1">${d.pm_g1||'-'}</td>
+                    <td data-field="pm_b2">${d.pm_b2||'-'}</td><td data-field="pm_cv2">${d.pm_cv2||'-'}</td><td data-field="pm_u2">${d.pm_u2||'-'}</td><td data-field="pm_g2">${d.pm_g2||'-'}</td>
+                    <td data-field="pm_b3">${d.pm_b3||'-'}</td><td data-field="pm_cv3">${d.pm_cv3||'-'}</td><td data-field="pm_u3">${d.pm_u3||'-'}</td><td data-field="pm_g3">${d.pm_g3||'-'}</td>
+                    <td data-field="pm_b4">${d.pm_b4||'-'}</td><td data-field="pm_cv4">${d.pm_cv4||'-'}</td><td data-field="pm_u4">${d.pm_u4||'-'}</td><td data-field="pm_g4">${d.pm_g4||'-'}</td>
+                    <td data-field="pm_b5">${d.pm_b5||'-'}</td><td data-field="pm_cv5">${d.pm_cv5||'-'}</td><td data-field="pm_u5">${d.pm_u5||'-'}</td><td data-field="pm_g5">${d.pm_g5||'-'}</td>
+                    <td data-field="pm_b6">${d.pm_b6||'-'}</td><td data-field="pm_cv6">${d.pm_cv6||'-'}</td><td data-field="pm_u6">${d.pm_u6||'-'}</td><td data-field="pm_g6">${d.pm_g6||'-'}</td>
+                    <td data-field="pm_b7">${d.pm_b7||'-'}</td><td data-field="pm_cv7">${d.pm_cv7||'-'}</td><td data-field="pm_u7">${d.pm_u7||'-'}</td><td data-field="pm_g7">${d.pm_g7||'-'}</td>
+                    <td data-field="pm_b8">${d.pm_b8||'-'}</td><td data-field="pm_cv8">${d.pm_cv8||'-'}</td><td data-field="pm_u8">${d.pm_u8||'-'}</td><td data-field="pm_g8">${d.pm_g8||'-'}</td>
                     <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('peso_machos/${child.key}')">Excluir</button></td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('peso_machos', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('peso_machos/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
+            restoreEditState('tableBodyPesoMachos');
         });
 
         // REAL X META
@@ -1471,6 +1579,7 @@
             const data = getFormData('cadastroRealMetaForm');
             data.tecnico = loggedUserName;
             data.userId = loggedUser; 
+            data.ordem = Date.now();
             
             database.ref('real_meta').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
@@ -1478,7 +1587,7 @@
             });
         });
 
-        database.ref('real_meta').on('value', (snapshot) => {
+        database.ref('real_meta').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBodyRealMeta');
             tbody.innerHTML = '';
             snapshot.forEach(child => {
@@ -1486,52 +1595,59 @@
                 
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
 
-                let tr = `<tr>
-                    <td>${d.tecnico || '-'}</td><td>${d.rm_lote || '-'}</td><td>${d.rm_aviario || '-'}</td><td>${d.rm_semana || '-'}</td>
-                    <td>${d.rm_peso_meta||'-'}</td><td>${d.rm_peso_real||'-'}</td>
-                    <td>${d.rm_aprov_meta||'-'}</td><td>${d.rm_aprov_real||'-'}</td>
-                    <td>${d.rm_mxf_ideal||'-'}</td><td>${d.rm_mxf_maximo||'-'}</td><td>${d.rm_mxf_real||'-'}</td>
-                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('real_meta/${child.key}')">Excluir</button></td>
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'real_meta')" ondragend="handleDragEnd.call(this, event)">
+                    <td>${d.tecnico || '-'}</td><td data-field="rm_lote">${d.rm_lote || '-'}</td><td data-field="rm_aviario">${d.rm_aviario || '-'}</td><td data-field="rm_semana">${d.rm_semana || '-'}</td>
+                    <td data-field="rm_peso_meta">${d.rm_peso_meta||'-'}</td><td data-field="rm_peso_real">${d.rm_peso_real||'-'}</td>
+                    <td data-field="rm_aprov_meta">${d.rm_aprov_meta||'-'}</td><td data-field="rm_aprov_real">${d.rm_aprov_real||'-'}</td>
+                    <td data-field="rm_mxf_ideal">${d.rm_mxf_ideal||'-'}</td><td data-field="rm_mxf_maximo">${d.rm_mxf_maximo||'-'}</td><td data-field="rm_mxf_real">${d.rm_mxf_real||'-'}</td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('real_meta', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('real_meta/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
+            restoreEditState('tableBodyRealMeta');
         });
 
         // PADRÃO
         document.getElementById('cadastroPadraoForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const data = getFormData('cadastroPadraoForm');
+            data.ordem = Date.now();
             database.ref('padrao').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroPadraoForm').reset();
             });
         });
 
-        database.ref('padrao').on('value', (snapshot) => {
+        database.ref('padrao').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBodyPadrao');
             tbody.innerHTML = '';
             snapshot.forEach(child => {
                 const d = child.val();
-                let tr = `<tr>
-                    <td>${d.pd_semana||'-'}</td><td>${d.pd_peso_m||'-'}</td><td>${d.pd_gad_m||'-'}</td>
-                    <td>${d.pd_peso_f||'-'}</td><td>${d.pd_gad_f||'-'}</td><td>${d.pd_ganho_m||'-'}</td>
-                    <td>${d.pd_ganho_f||'-'}</td><td>${d.pd_energia_m||'-'}</td><td>${d.pd_energia_f||'-'}</td>
-                    <td>${d.pd_relacao||'-'}</td><td>${d.pd_std_unif||'-'}</td><td>${d.pd_cv||'-'}</td>
-                    <td>${d.pd_mort||'-'}</td><td>${d.pd_std_viab||'-'}</td>
-                    <td class="action-col"><button class="btn-delete" type="button" onclick="deleteRecord('padrao/${child.key}')">Excluir</button></td>
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'padrao')" ondragend="handleDragEnd.call(this, event)">
+                    <td data-field="pd_semana">${d.pd_semana||'-'}</td><td data-field="pd_peso_m">${d.pd_peso_m||'-'}</td><td data-field="pd_gad_m">${d.pd_gad_m||'-'}</td>
+                    <td data-field="pd_peso_f">${d.pd_peso_f||'-'}</td><td data-field="pd_gad_f">${d.pd_gad_f||'-'}</td><td data-field="pd_ganho_m">${d.pd_ganho_m||'-'}</td>
+                    <td data-field="pd_ganho_f">${d.pd_ganho_f||'-'}</td><td data-field="pd_energia_m">${d.pd_energia_m||'-'}</td><td data-field="pd_energia_f">${d.pd_energia_f||'-'}</td>
+                    <td data-field="pd_relacao">${d.pd_relacao||'-'}</td><td data-field="pd_std_unif">${d.pd_std_unif||'-'}</td><td data-field="pd_cv">${d.pd_cv||'-'}</td>
+                    <td data-field="pd_mort">${d.pd_mort||'-'}</td><td data-field="pd_std_viab">${d.pd_std_viab||'-'}</td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('padrao', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('padrao/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
+            restoreEditState('tableBodyPadrao');
         });
 
-        // Toggle Modo Edição e Exclusão
+        // Toggle Modo Edição, Exclusão e Drag & Drop
         ['', 'PF', 'PM', 'RM', 'PD'].forEach(suf => {
             const btn = document.getElementById(`editToggleBtn${suf}`);
             if(btn) {
                 btn.addEventListener('click', function() {
                     const tableContainer = this.closest('.header').nextElementSibling;
-                    tableContainer.classList.toggle('edit-mode');
+                    const isEditMode = tableContainer.classList.toggle('edit-mode');
                     this.classList.toggle('active');
+                    
+                    tableContainer.querySelectorAll('td[data-field]').forEach(td => {
+                        td.setAttribute('contenteditable', isEditMode);
+                    });
                 });
             }
         });
