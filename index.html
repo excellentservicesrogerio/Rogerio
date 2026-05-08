@@ -866,6 +866,11 @@
     </main>
 
     <script>
+        // --- FUNÇÕES GLOBAIS DE FORMATAÇÃO E CÁLCULO ---
+        const formatNum = (num) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(num);
+        const formatPct = (num) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num) + '%';
+        const calcPct = (valor, divisor) => divisor ? formatPct((valor / divisor) * 100) : '0,00%';
+
         // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyA35WBVNm2VxDP1se80CqGtTR5h3u6f99U",
@@ -1435,7 +1440,6 @@
             }
         }
 
-        // Re-aplica estado de edição ao redesenhar a tabela
         function restoreEditState(tbodyId) {
             const tbody = document.getElementById(tbodyId);
             const tableContainer = tbody.closest('.table-container');
@@ -1443,6 +1447,36 @@
                 tbody.querySelectorAll('td[data-field]').forEach(td => td.setAttribute('contenteditable', 'true'));
             }
         }
+
+        // Caching global para dados da aba Padrão
+        let padraoDataCache = {};
+        let lastSnapPF = null;
+        let lastSnapPM = null;
+
+        database.ref('padrao').orderByChild('ordem').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBodyPadrao');
+            tbody.innerHTML = '';
+            padraoDataCache = {};
+            
+            snapshot.forEach(child => {
+                const d = child.val();
+                if(d.pd_semana) { padraoDataCache[String(d.pd_semana)] = d; }
+                
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'padrao')" ondragend="handleDragEnd.call(this, event)">
+                    <td data-field="pd_semana">${d.pd_semana||'-'}</td><td data-field="pd_peso_m">${d.pd_peso_m||'-'}</td><td data-field="pd_gad_m">${d.pd_gad_m||'-'}</td>
+                    <td data-field="pd_peso_f">${d.pd_peso_f||'-'}</td><td data-field="pd_gad_f">${d.pd_gad_f||'-'}</td><td data-field="pd_ganho_m">${d.pd_ganho_m||'-'}</td>
+                    <td data-field="pd_ganho_f">${d.pd_ganho_f||'-'}</td><td data-field="pd_energia_m">${d.pd_energia_m||'-'}</td><td data-field="pd_energia_f">${d.pd_energia_f||'-'}</td>
+                    <td data-field="pd_relacao">${d.pd_relacao||'-'}</td><td data-field="pd_std_unif">${d.pd_std_unif||'-'}</td><td data-field="pd_cv">${d.pd_cv||'-'}</td>
+                    <td data-field="pd_mort">${d.pd_mort||'-'}</td><td data-field="pd_std_viab">${d.pd_std_viab||'-'}</td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('padrao', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('padrao/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+            restoreEditState('tableBodyPadrao');
+            if(lastSnapPF) renderPesoFemeas();
+            if(lastSnapPM) renderPesoMachos();
+        });
+
 
         // MATRIZ
         document.getElementById('cadastroMatrizForm').addEventListener('submit', (e) => {
@@ -1466,25 +1500,86 @@
                 
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
+                let dia = "-", mes = "-", ano = "-";
+                let dataFormatada = '-';
+                if(d.c_data) {
+                    const dateObj = new Date(d.c_data + 'T00:00:00');
+                    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    dia = diasSemana[dateObj.getDay()];
+                    mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    ano = dateObj.getFullYear();
+                    dataFormatada = d.c_data.split('-').reverse().join('/');
+                }
+
+                const producao = Number(d.c_producao) || 0;
+                const quebrados = Number(d.c_quebrados) || 0;
+                const trincados = Number(d.c_trincados) || 0;
+                const deformados = Number(d.c_deformados) || 0;
+                const duasgemas = Number(d.c_duasgemas) || 0;
+                const pequenos = Number(d.c_pequenos) || 0;
+                const sujoscama = Number(d.c_sujoscama) || 0;
+                const sujosninho = Number(d.c_sujosninho) || 0;
+                const sujosdescartes = Number(d.c_sujosdescartes) || 0;
+                const ovoscomercio = Number(d.c_ovoscomercio) || 0;
+                const ovoslimpos = Number(d.c_ovoslimpos) || 0;
+                const ovosincubatorio = Number(d.c_ovosincubatorio) || 0;
+
+                const f_b = [], f_q = [], m_b = [], m_q = [];
+                let f_mort = 0, f_saldo = 0, m_mort = 0, m_saldo = 0;
+
+                for(let i = 1; i <= 8; i++) {
+                    let fb = Number(d['f_b'+i]) || 0;
+                    let fq = Number(d['f_q'+i]) || 0;
+                    f_b.push(fb); f_q.push(fq);
+                    f_saldo += fb; f_mort += fq;  
+
+                    let mb = Number(d['m_b'+i]) || 0;
+                    let mq = Number(d['m_q'+i]) || 0;
+                    m_b.push(mb); m_q.push(mq);
+                    m_saldo += mb; m_mort += mq;  
+                }
+
+                let f_qtdSaldo = Math.abs(f_mort - f_saldo); 
+                let f_pct = f_saldo ? formatPct((f_mort / f_saldo) * 100) : '0,00%';
+                let m_qtdSaldo = Math.abs(m_mort - m_saldo);
+                let m_pct = m_saldo ? formatPct((m_mort / m_saldo) * 100) : '0,00%';
+                let pctMachos = m_saldo ? formatPct((f_saldo / m_saldo) * 100) : '0,00%';
+                let qtdPct = m_qtdSaldo ? formatPct((f_qtdSaldo / m_qtdSaldo) * 100) : '0,00%';
+
+                let p_producao = calcPct(producao, m_mort);
+                let p_quebrados = calcPct(quebrados, producao);
+                let p_trincados = calcPct(trincados, producao);
+                let p_deformados = calcPct(deformados, producao);
+                let p_duasgemas = calcPct(duasgemas, producao);
+                let p_pequenos = calcPct(pequenos, producao);
+                let p_sujoscama = calcPct(sujoscama, producao);
+                let p_sujosninho = calcPct(sujosninho, producao);
+                let p_sujosdescartes = calcPct(sujosdescartes, producao);
+                let p_ovoscomercio = calcPct(ovoscomercio, producao);
+                let p_ovoslimpos = calcPct(ovoslimpos, producao);
+                let p_ovosincubatorio = calcPct(ovosincubatorio, producao);
+
+                let f_html = f_b.map((val, idx) => `<td data-field="f_b${idx+1}">${d['f_b'+(idx+1)]||'-'}</td><td data-field="f_q${idx+1}">${d['f_q'+(idx+1)]||'-'}</td>`).join('');
+                let m_html = m_b.map((val, idx) => `<td data-field="m_b${idx+1}">${d['m_b'+(idx+1)]||'-'}</td><td data-field="m_q${idx+1}">${d['m_q'+(idx+1)]||'-'}</td>`).join('');
+
                 let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'matriz')" ondragend="handleDragEnd.call(this, event)">
                     <td>${d.tecnico || '-'}</td>
                     <td data-field="c_data">${d.c_data || '-'}</td><td data-field="c_lote">${d.c_lote || '-'}</td>
-                    <td>-</td><td>-</td><td>-</td><td data-field="c_semana">${d.c_semana || '-'}</td><td data-field="c_aviario">${d.c_aviario || '-'}</td>
+                    <td>${mes}</td><td>${ano}</td><td>${dia}</td><td data-field="c_semana">${d.c_semana || '-'}</td><td data-field="c_aviario">${d.c_aviario || '-'}</td>
                     <td data-field="c_producao">${d.c_producao || '-'}</td><td data-field="c_quebrados">${d.c_quebrados || '-'}</td><td data-field="c_trincados">${d.c_trincados || '-'}</td>
                     <td data-field="c_deformados">${d.c_deformados || '-'}</td><td data-field="c_duasgemas">${d.c_duasgemas || '-'}</td><td data-field="c_pequenos">${d.c_pequenos || '-'}</td>
                     <td data-field="c_sujoscama">${d.c_sujoscama || '-'}</td><td data-field="c_sujosninho">${d.c_sujosninho || '-'}</td><td data-field="c_sujosdescartes">${d.c_sujosdescartes || '-'}</td>
                     <td data-field="c_ovoscomercio">${d.c_ovoscomercio || '-'}</td><td data-field="c_ovoslimpos">${d.c_ovoslimpos || '-'}</td><td data-field="c_ovosincubatorio">${d.c_ovosincubatorio || '-'}</td>
-                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-                    <td data-field="f_b1">${d.f_b1||'-'}</td><td data-field="f_q1">${d.f_q1||'-'}</td><td data-field="f_b2">${d.f_b2||'-'}</td><td data-field="f_q2">${d.f_q2||'-'}</td>
-                    <td data-field="f_b3">${d.f_b3||'-'}</td><td data-field="f_q3">${d.f_q3||'-'}</td><td data-field="f_b4">${d.f_b4||'-'}</td><td data-field="f_q4">${d.f_q4||'-'}</td>
-                    <td data-field="f_b5">${d.f_b5||'-'}</td><td data-field="f_q5">${d.f_q5||'-'}</td><td data-field="f_b6">${d.f_b6||'-'}</td><td data-field="f_q6">${d.f_q6||'-'}</td>
-                    <td data-field="f_b7">${d.f_b7||'-'}</td><td data-field="f_q7">${d.f_q7||'-'}</td><td data-field="f_b8">${d.f_b8||'-'}</td><td data-field="f_q8">${d.f_q8||'-'}</td>
-                    <td>-</td><td>-</td><td>-</td><td>-</td>
-                    <td data-field="m_b1">${d.m_b1||'-'}</td><td data-field="m_q1">${d.m_q1||'-'}</td><td data-field="m_b2">${d.m_b2||'-'}</td><td data-field="m_q2">${d.m_q2||'-'}</td>
-                    <td data-field="m_b3">${d.m_b3||'-'}</td><td data-field="m_q3">${d.m_q3||'-'}</td><td data-field="m_b4">${d.m_b4||'-'}</td><td data-field="m_q4">${d.m_q4||'-'}</td>
-                    <td data-field="m_b5">${d.m_b5||'-'}</td><td data-field="m_q5">${d.m_q5||'-'}</td><td data-field="m_b6">${d.m_b6||'-'}</td><td data-field="m_q6">${d.m_q6||'-'}</td>
-                    <td data-field="m_b7">${d.m_b7||'-'}</td><td data-field="m_q7">${d.m_q7||'-'}</td><td data-field="m_b8">${d.m_b8||'-'}</td><td data-field="m_q8">${d.m_q8||'-'}</td>
-                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    
+                    <td class="calc-header">${p_producao}</td><td class="calc-header">${p_quebrados}</td><td class="calc-header">${p_trincados}</td><td class="calc-header">${p_deformados}</td><td class="calc-header">${p_duasgemas}</td><td class="calc-header">${p_pequenos}</td>
+                    <td class="calc-header">${p_sujoscama}</td><td class="calc-header">${p_sujosninho}</td><td class="calc-header">${p_sujosdescartes}</td><td class="calc-header">${p_ovoscomercio}</td><td class="calc-header">${p_ovoslimpos}</td><td class="calc-header">${p_ovosincubatorio}</td>
+                    
+                    ${f_html}
+                    <td class="calc-header">${formatNum(f_mort)}</td><td class="calc-header">${formatNum(f_saldo)}</td><td class="calc-header">${formatNum(f_qtdSaldo)}</td><td class="calc-header">${f_pct}</td>
+                    
+                    ${m_html}
+                    <td class="calc-header">${formatNum(m_mort)}</td><td class="calc-header">${formatNum(m_saldo)}</td><td class="calc-header">${formatNum(m_qtdSaldo)}</td><td class="calc-header">${m_pct}</td><td class="calc-header">${pctMachos}</td><td class="calc-header">${qtdPct}</td>
+
                     <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('matriz', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('matriz/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
@@ -1499,36 +1594,64 @@
             data.tecnico = loggedUserName;
             data.userId = loggedUser; 
             data.ordem = Date.now();
-            
             database.ref('peso_femeas').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroPesoFemeasForm').reset();
             });
         });
 
-        database.ref('peso_femeas').orderByChild('ordem').on('value', (snapshot) => {
+        function renderPesoFemeas() {
+            if(!lastSnapPF) return;
             const tbody = document.getElementById('tableBodyPesoFemeas');
             tbody.innerHTML = '';
-            snapshot.forEach(child => {
+            lastSnapPF.forEach(child => {
                 const d = child.val();
-                
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
+                let mes = "-", ano = "-";
+                if(d.pf_data) {
+                    const dateObj = new Date(d.pf_data + 'T00:00:00');
+                    mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    ano = dateObj.getFullYear();
+                }
+
+                let padrao = padraoDataCache[String(d.pf_semana)] || {};
+                let pesoF = Number(padrao.pd_peso_f) || 0;
+                let gadF = Number(padrao.pd_gad_f) || 0;
+                
+                let displayPesoF = pesoF > 0 ? formatNum(pesoF) : '-';
+                let displayGadF = gadF > 0 ? formatNum(gadF) : '-';
+
+                let pesos = [], unifs = [];
+                let htmlCampos1a8 = '';
+                for(let i=1; i<=8; i++) {
+                    let p = Number(d['pf_p'+i])||0; let u = Number(d['pf_u'+i])||0;
+                    if(p>0) pesos.push(p); if(u>0) unifs.push(u);
+                    htmlCampos1a8 += `<td data-field="pf_p${i}">${d['pf_p'+i]||'-'}</td><td data-field="pf_u${i}">${d['pf_u'+i]||'-'}</td>`;
+                }
+
+                let pesoMedio = pesos.length > 0 ? pesos.reduce((a,b)=>a+b,0)/pesos.length : 0;
+                let unifMedio = unifs.length > 0 ? unifs.reduce((a,b)=>a+b,0)/unifs.length : 0;
+                let pctAcimaPeso = pesoF > 0 ? formatPct(((pesoMedio/pesoF)*100)-100) : '-';
+
                 let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'peso_femeas')" ondragend="handleDragEnd.call(this, event)">
-                    <td>${d.tecnico || '-'}</td><td data-field="pf_data">${d.pf_data || '-'}</td><td>-</td><td>-</td>
+                    <td>${d.tecnico || '-'}</td><td data-field="pf_data">${d.pf_data || '-'}</td><td>${mes}</td><td>${ano}</td>
                     <td data-field="pf_granja">${d.pf_granja || '-'}</td><td data-field="pf_lote">${d.pf_lote || '-'}</td><td data-field="pf_aviario">${d.pf_aviario || '-'}</td><td data-field="pf_semana">${d.pf_semana || '-'}</td>
-                    <td>-</td>
-                    <td data-field="pf_p1">${d.pf_p1||'-'}</td><td data-field="pf_u1">${d.pf_u1||'-'}</td><td data-field="pf_p2">${d.pf_p2||'-'}</td><td data-field="pf_u2">${d.pf_u2||'-'}</td>
-                    <td data-field="pf_p3">${d.pf_p3||'-'}</td><td data-field="pf_u3">${d.pf_u3||'-'}</td><td data-field="pf_p4">${d.pf_p4||'-'}</td><td data-field="pf_u4">${d.pf_u4||'-'}</td>
-                    <td data-field="pf_p5">${d.pf_p5||'-'}</td><td data-field="pf_u5">${d.pf_u5||'-'}</td><td data-field="pf_p6">${d.pf_p6||'-'}</td><td data-field="pf_u6">${d.pf_u6||'-'}</td>
-                    <td data-field="pf_p7">${d.pf_p7||'-'}</td><td data-field="pf_u7">${d.pf_u7||'-'}</td><td data-field="pf_p8">${d.pf_p8||'-'}</td><td data-field="pf_u8">${d.pf_u8||'-'}</td>
-                    <td>-</td><td data-field="pf_gad_real">${d.pf_gad_real||'-'}</td><td>-</td><td>-</td>
-                    <td data-field="pf_meta">${d.pf_meta||'-'}</td><td data-field="pf_real">${d.pf_real||'-'}</td><td data-field="pf_m_meta">${d.pf_m_meta||'-'}</td><td data-field="pf_m_real">${d.pf_m_real||'-'}</td><td>-</td>
+                    <td class="calc-header">${displayPesoF}</td>
+                    ${htmlCampos1a8}
+                    <td class="calc-header">${displayGadF}</td><td data-field="pf_gad_real">${d.pf_gad_real||'-'}</td><td class="calc-header">${formatNum(pesoMedio)}</td><td class="calc-header">${formatNum(unifMedio)}</td>
+                    <td data-field="pf_meta">${d.pf_meta||'-'}</td><td data-field="pf_real">${d.pf_real||'-'}</td><td data-field="pf_m_meta">${d.pf_m_meta||'-'}</td><td data-field="pf_m_real">${d.pf_m_real||'-'}</td>
+                    <td class="calc-header">${pctAcimaPeso}</td>
                     <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('peso_femeas', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('peso_femeas/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
             restoreEditState('tableBodyPesoFemeas');
+        }
+
+        database.ref('peso_femeas').orderByChild('ordem').on('value', (snapshot) => {
+            lastSnapPF = snapshot;
+            renderPesoFemeas();
         });
 
         // PESO MACHOS
@@ -1538,39 +1661,69 @@
             data.tecnico = loggedUserName;
             data.userId = loggedUser; 
             data.ordem = Date.now();
-            
             database.ref('peso_machos').push(data).then(() => {
                 showCustomAlert('Lançamento salvo com sucesso!');
                 document.getElementById('cadastroPesoMachosForm').reset();
             });
         });
 
-        database.ref('peso_machos').orderByChild('ordem').on('value', (snapshot) => {
+        function renderPesoMachos() {
+            if(!lastSnapPM) return;
             const tbody = document.getElementById('tableBodyPesoMachos');
             tbody.innerHTML = '';
-            snapshot.forEach(child => {
+            lastSnapPM.forEach(child => {
                 const d = child.val();
-                
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
 
+                let mes = "-", ano = "-";
+                if(d.pm_data) {
+                    const dateObj = new Date(d.pm_data + 'T00:00:00');
+                    mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    ano = dateObj.getFullYear();
+                }
+
+                let padrao = padraoDataCache[String(d.pm_semana)] || {};
+                let pesoPadrao = Number(padrao.pd_peso_m) || 0;
+                let gadM = Number(padrao.pd_gad_m) || 0;
+                
+                let displayPesoPadrao = pesoPadrao > 0 ? formatNum(pesoPadrao) : '-';
+                let displayGadM = gadM > 0 ? formatNum(gadM) : '-';
+
+                let gads = [];
+                for(let i=1; i<=8; i++) {
+                    let g = Number(d['pm_g'+i]) || 0;
+                    if(g > 0) gads.push(g);
+                }
+                let gadReal = gads.length > 0 ? gads.reduce((a, b) => a + b, 0) / gads.length : 0;
+                const calcAcimaPeso = (boxVal) => pesoPadrao > 0 ? formatPct(((Number(boxVal)||0) / pesoPadrao * 100) - 100) : '-';
+
+                let boxesHtml = '';
+                for(let i=1; i<=8; i++) {
+                    boxesHtml += `<td data-field="pm_b${i}">${d['pm_b'+i]||'-'}</td><td data-field="pm_cv${i}">${d['pm_cv'+i]||'-'}</td><td data-field="pm_u${i}">${d['pm_u'+i]||'-'}</td><td data-field="pm_g${i}">${d['pm_g'+i]||'-'}</td>`;
+                }
+
+                let calcAcimaHtml = '';
+                for(let i=1; i<=4; i++) calcAcimaHtml += `<td class="calc-header">${calcAcimaPeso(d['pm_b'+i])}</td>`;
+                calcAcimaHtml += `<td class="calc-header">${calcAcimaPeso(d.pm_peso_medio)}</td>`;
+                for(let i=5; i<=8; i++) calcAcimaHtml += `<td class="calc-header">${calcAcimaPeso(d['pm_b'+i])}</td>`;
+
                 let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'peso_machos')" ondragend="handleDragEnd.call(this, event)">
-                    <td>${d.tecnico || '-'}</td><td data-field="pm_data">${d.pm_data || '-'}</td><td>-</td><td>-</td>
+                    <td>${d.tecnico || '-'}</td><td data-field="pm_data">${d.pm_data || '-'}</td><td>${mes}</td><td>${ano}</td>
                     <td data-field="pm_granja">${d.pm_granja || '-'}</td><td data-field="pm_lote">${d.pm_lote || '-'}</td><td data-field="pm_aviario">${d.pm_aviario || '-'}</td><td data-field="pm_semana">${d.pm_semana || '-'}</td>
-                    <td>-</td><td data-field="pm_peso_medio">${d.pm_peso_medio||'-'}</td><td data-field="pm_uni">${d.pm_uni||'-'}</td>
-                    <td data-field="pm_b1">${d.pm_b1||'-'}</td><td data-field="pm_cv1">${d.pm_cv1||'-'}</td><td data-field="pm_u1">${d.pm_u1||'-'}</td><td data-field="pm_g1">${d.pm_g1||'-'}</td>
-                    <td data-field="pm_b2">${d.pm_b2||'-'}</td><td data-field="pm_cv2">${d.pm_cv2||'-'}</td><td data-field="pm_u2">${d.pm_u2||'-'}</td><td data-field="pm_g2">${d.pm_g2||'-'}</td>
-                    <td data-field="pm_b3">${d.pm_b3||'-'}</td><td data-field="pm_cv3">${d.pm_cv3||'-'}</td><td data-field="pm_u3">${d.pm_u3||'-'}</td><td data-field="pm_g3">${d.pm_g3||'-'}</td>
-                    <td data-field="pm_b4">${d.pm_b4||'-'}</td><td data-field="pm_cv4">${d.pm_cv4||'-'}</td><td data-field="pm_u4">${d.pm_u4||'-'}</td><td data-field="pm_g4">${d.pm_g4||'-'}</td>
-                    <td data-field="pm_b5">${d.pm_b5||'-'}</td><td data-field="pm_cv5">${d.pm_cv5||'-'}</td><td data-field="pm_u5">${d.pm_u5||'-'}</td><td data-field="pm_g5">${d.pm_g5||'-'}</td>
-                    <td data-field="pm_b6">${d.pm_b6||'-'}</td><td data-field="pm_cv6">${d.pm_cv6||'-'}</td><td data-field="pm_u6">${d.pm_u6||'-'}</td><td data-field="pm_g6">${d.pm_g6||'-'}</td>
-                    <td data-field="pm_b7">${d.pm_b7||'-'}</td><td data-field="pm_cv7">${d.pm_cv7||'-'}</td><td data-field="pm_u7">${d.pm_u7||'-'}</td><td data-field="pm_g7">${d.pm_g7||'-'}</td>
-                    <td data-field="pm_b8">${d.pm_b8||'-'}</td><td data-field="pm_cv8">${d.pm_cv8||'-'}</td><td data-field="pm_u8">${d.pm_u8||'-'}</td><td data-field="pm_g8">${d.pm_g8||'-'}</td>
-                    <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+                    <td class="calc-header">${displayPesoPadrao}</td><td data-field="pm_peso_medio">${d.pm_peso_medio||'-'}</td><td data-field="pm_uni">${d.pm_uni||'-'}</td>
+                    ${boxesHtml}
+                    <td class="calc-header">${displayGadM}</td><td class="calc-header">${formatNum(gadReal)}</td>
+                    ${calcAcimaHtml}
                     <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('peso_machos', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('peso_machos/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
             });
             restoreEditState('tableBodyPesoMachos');
+        }
+
+        database.ref('peso_machos').orderByChild('ordem').on('value', (snapshot) => {
+            lastSnapPM = snapshot;
+            renderPesoMachos();
         });
 
         // REAL X META
@@ -1592,7 +1745,6 @@
             tbody.innerHTML = '';
             snapshot.forEach(child => {
                 const d = child.val();
-                
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
 
                 let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'real_meta')" ondragend="handleDragEnd.call(this, event)">
@@ -1607,35 +1759,6 @@
             restoreEditState('tableBodyRealMeta');
         });
 
-        // PADRÃO
-        document.getElementById('cadastroPadraoForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const data = getFormData('cadastroPadraoForm');
-            data.ordem = Date.now();
-            database.ref('padrao').push(data).then(() => {
-                showCustomAlert('Lançamento salvo com sucesso!');
-                document.getElementById('cadastroPadraoForm').reset();
-            });
-        });
-
-        database.ref('padrao').orderByChild('ordem').on('value', (snapshot) => {
-            const tbody = document.getElementById('tableBodyPadrao');
-            tbody.innerHTML = '';
-            snapshot.forEach(child => {
-                const d = child.val();
-                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'padrao')" ondragend="handleDragEnd.call(this, event)">
-                    <td data-field="pd_semana">${d.pd_semana||'-'}</td><td data-field="pd_peso_m">${d.pd_peso_m||'-'}</td><td data-field="pd_gad_m">${d.pd_gad_m||'-'}</td>
-                    <td data-field="pd_peso_f">${d.pd_peso_f||'-'}</td><td data-field="pd_gad_f">${d.pd_gad_f||'-'}</td><td data-field="pd_ganho_m">${d.pd_ganho_m||'-'}</td>
-                    <td data-field="pd_ganho_f">${d.pd_ganho_f||'-'}</td><td data-field="pd_energia_m">${d.pd_energia_m||'-'}</td><td data-field="pd_energia_f">${d.pd_energia_f||'-'}</td>
-                    <td data-field="pd_relacao">${d.pd_relacao||'-'}</td><td data-field="pd_std_unif">${d.pd_std_unif||'-'}</td><td data-field="pd_cv">${d.pd_cv||'-'}</td>
-                    <td data-field="pd_mort">${d.pd_mort||'-'}</td><td data-field="pd_std_viab">${d.pd_std_viab||'-'}</td>
-                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('padrao', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('padrao/${child.key}')">Excluir</button></td>
-                </tr>`;
-                tbody.innerHTML += tr;
-            });
-            restoreEditState('tableBodyPadrao');
-        });
-
         // Toggle Modo Edição, Exclusão e Drag & Drop
         ['', 'PF', 'PM', 'RM', 'PD'].forEach(suf => {
             const btn = document.getElementById(`editToggleBtn${suf}`);
@@ -1644,7 +1767,6 @@
                     const tableContainer = this.closest('.header').nextElementSibling;
                     const isEditMode = tableContainer.classList.toggle('edit-mode');
                     this.classList.toggle('active');
-                    
                     tableContainer.querySelectorAll('td[data-field]').forEach(td => {
                         td.setAttribute('contenteditable', isEditMode);
                     });
@@ -1655,7 +1777,6 @@
         function updateDashboardPesoMachos() {
             // Placeholder para atualizar os gráficos
         }
-
     </script>
 </body>
 </html>
