@@ -302,6 +302,7 @@
     <div class="mobile-backdrop" onclick="toggleMobileSidebar()"></div>
 
     <div id="welcome-screen">
+        <img id="welcomeAvatar" src="" alt="Avatar" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; border: 4px solid var(--red-vivid); display: none; box-shadow: 0 0 20px rgba(230, 25, 59, 0.4); background-color: #222;">
         <h2 id="welcomeName">Bem Vindo</h2>
         <p>Carregando seu ambiente High Performance...</p>
         <div class="spinner"></div>
@@ -900,7 +901,7 @@
 
         function applyCacheBuster(url) {
             if(!url) return url;
-            return url.includes('?') ? url + '&cb=' + Date.now() : url + '?cb=' + Date.now();
+            return url; // Removido o cachebuster automático para não recarregar fotos toda hora e resolver a lentidão
         }
 
         // --- SISTEMA MOBILE RESPONSIVO ---
@@ -1057,17 +1058,15 @@
             document.getElementById('profAnim').checked = animacaoAtiva;
             
             if(avatarUrl) {
-                const safeUrl = applyCacheBuster(avatarUrl);
-                document.getElementById('sidebarProfilePic').src = safeUrl;
-                document.getElementById('avatarPreview').src = safeUrl;
+                document.getElementById('sidebarProfilePic').src = avatarUrl;
+                document.getElementById('avatarPreview').src = avatarUrl;
             } else {
                 const defaultSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
                 document.getElementById('sidebarProfilePic').src = defaultSvg;
                 document.getElementById('avatarPreview').src = defaultSvg;
             }
             if(coverUrl) {
-                const safeUrl = applyCacheBuster(coverUrl);
-                document.getElementById('coverPreview').src = safeUrl;
+                document.getElementById('coverPreview').src = coverUrl;
             } else {
                 document.getElementById('coverPreview').src = "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=1000&auto=format&fit=crop";
             }
@@ -1092,6 +1091,14 @@
             const welcomeScreen = document.getElementById('welcome-screen');
             
             if (!isRestoreSession) {
+                const welcomeAvatar = document.getElementById('welcomeAvatar');
+                if(avatarUrl) {
+                    welcomeAvatar.src = avatarUrl;
+                    welcomeAvatar.style.display = 'block';
+                } else {
+                    welcomeAvatar.style.display = 'none';
+                }
+
                 document.getElementById('welcomeName').innerText = "Bem Vindo, " + loggedUserName;
                 loginScreen.style.opacity = '0';
                 
@@ -1149,17 +1156,19 @@
                         <option value="admin" ${data.tipo === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>`;
 
+                    let passDisplay = loggedUserType === 'desenvolvedor' ? `<br><span style="font-size: 10px; color: var(--text-muted);">Senha: <span style="color: #fff;">${data.senha}</span></span>` : '';
+
                     let actionsHtml = `<select onchange="updateUserStatus('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;"><option value="Pendente" ${data.status === 'Pendente' ? 'selected' : ''}>Pendente</option><option value="Ativo" ${data.status === 'Ativo' ? 'selected' : ''}>Ativo</option><option value="Inativo" ${data.status === 'Inativo' ? 'selected' : ''}>Inativo</option></select>`;
                     if (loggedUserType === 'desenvolvedor') { actionsHtml += `<button onclick="forcePasswordChange('${userKey}')" style="background:var(--red-vivid); color:#fff; border:none; padding:4px; border-radius:4px; cursor:pointer; margin-left:5px; font-size:10px;">Senha</button>`; }
 
-                    tbody.innerHTML += `<tr><td>${data.nome}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${data.nome}${passDisplay}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
                 });
             });
         }
 
         function updateUserStatus(userKey, newStatus) { database.ref('users/' + userKey).update({ status: newStatus }).then(() => { loadAccessTable(); }); }
         function updateUserType(userKey, newType) { database.ref('users/' + userKey).update({ tipo: newType }).then(() => { showCustomAlert("Tipo de usuário atualizado!", "Sucesso"); loadAccessTable(); }); }
-        function forcePasswordChange(userKey) { const newPass = prompt("Digite a nova senha para o usuário " + userKey + ":"); if (newPass) { database.ref('users/' + userKey).update({ senha: newPass }).then(() => { showCustomAlert("Senha alterada com sucesso!", "Gestão de Acessos"); }); } }
+        function forcePasswordChange(userKey) { const newPass = prompt("Digite a nova senha para o usuário " + userKey + ":"); if (newPass) { database.ref('users/' + userKey).update({ senha: newPass }).then(() => { showCustomAlert("Senha alterada com sucesso!", "Gestão de Acessos"); loadAccessTable(); }); } }
 
         // --- FULLSCREEN ---
         function toggleFullscreen() {
@@ -1286,10 +1295,10 @@
                         try {
                             const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
                             await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
-                            updates.avatarUrl = await avatarRef.getDownloadURL();
-                            const safeUrl = applyCacheBuster(updates.avatarUrl);
-                            document.getElementById('sidebarProfilePic').src = safeUrl;
-                            document.getElementById('avatarPreview').src = safeUrl;
+                            let dlUrl = await avatarRef.getDownloadURL();
+                            updates.avatarUrl = dlUrl.includes('?') ? dlUrl + '&cb=' + Date.now() : dlUrl + '?cb=' + Date.now();
+                            document.getElementById('sidebarProfilePic').src = updates.avatarUrl;
+                            document.getElementById('avatarPreview').src = updates.avatarUrl;
                         } catch(err) {
                             updates.avatarUrl = pendingAvatarDataUrl; 
                             document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
@@ -1299,8 +1308,9 @@
                         try {
                             const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
                             await coverRef.putString(pendingCoverDataUrl, 'data_url');
-                            updates.coverUrl = await coverRef.getDownloadURL();
-                            document.getElementById('coverPreview').src = applyCacheBuster(updates.coverUrl);
+                            let dlUrl = await coverRef.getDownloadURL();
+                            updates.coverUrl = dlUrl.includes('?') ? dlUrl + '&cb=' + Date.now() : dlUrl + '?cb=' + Date.now();
+                            document.getElementById('coverPreview').src = updates.coverUrl;
                         } catch(err) {
                             updates.coverUrl = pendingCoverDataUrl; 
                             document.getElementById('coverPreview').src = pendingCoverDataUrl;
@@ -1495,6 +1505,11 @@
         database.ref('matriz').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
+            
+            let prevSemana = null;
+            let prevQtdSaldoF = 0;
+            let prevQtdSaldoM = 0;
+
             snapshot.forEach(child => {
                 const d = child.val();
                 
@@ -1539,14 +1554,24 @@
                     m_saldo += mb; m_mort += mq;  
                 }
 
-                let f_qtdSaldo = Math.abs(f_mort - f_saldo); 
-                let f_pct = f_saldo ? formatPct((f_mort / f_saldo) * 100) : '0,00%';
-                let m_qtdSaldo = Math.abs(m_mort - m_saldo);
-                let m_pct = m_saldo ? formatPct((m_mort / m_saldo) * 100) : '0,00%';
-                let pctMachos = m_saldo ? formatPct((f_saldo / m_saldo) * 100) : '0,00%';
-                let qtdPct = m_qtdSaldo ? formatPct((f_qtdSaldo / m_qtdSaldo) * 100) : '0,00%';
+                let f_qtdSaldo = 0;
+                let m_qtdSaldo = 0;
 
-                let p_producao = calcPct(producao, m_mort);
+                if (d.c_semana && d.c_semana === prevSemana) {
+                    f_qtdSaldo = prevQtdSaldoF - f_mort;
+                    m_qtdSaldo = prevQtdSaldoM - m_mort;
+                } else {
+                    f_qtdSaldo = f_saldo - f_mort;
+                    m_qtdSaldo = m_saldo - m_mort;
+                }
+
+                let f_pct = f_qtdSaldo ? formatPct((f_mort / f_qtdSaldo) * 100) : '0,00%';
+                let m_pct = m_qtdSaldo ? formatPct((m_mort / m_qtdSaldo) * 100) : '0,00%';
+                
+                let pctMachos = m_qtdSaldo ? formatPct((f_qtdSaldo / m_qtdSaldo) * 100) : '0,00%';
+                let qtdPct = m_qtdSaldo ? formatPct((Math.abs(f_qtdSaldo - m_qtdSaldo) / m_qtdSaldo) * 100) : '0,00%';
+
+                let p_producao = calcPct(producao, f_qtdSaldo);
                 let p_quebrados = calcPct(quebrados, producao);
                 let p_trincados = calcPct(trincados, producao);
                 let p_deformados = calcPct(deformados, producao);
@@ -1583,6 +1608,10 @@
                     <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('matriz', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('matriz/${child.key}')">Excluir</button></td>
                 </tr>`;
                 tbody.innerHTML += tr;
+
+                prevSemana = d.c_semana;
+                prevQtdSaldoF = f_qtdSaldo;
+                prevQtdSaldoM = m_qtdSaldo;
             });
             restoreEditState('tableBody');
         });
@@ -1695,7 +1724,12 @@
                     if(g > 0) gads.push(g);
                 }
                 let gadReal = gads.length > 0 ? gads.reduce((a, b) => a + b, 0) / gads.length : 0;
-                const calcAcimaPeso = (boxVal) => pesoPadrao > 0 ? formatPct(((Number(boxVal)||0) / pesoPadrao * 100) - 100) : '-';
+                
+                const calcAcimaPeso = (boxVal) => {
+                    let val = Number(boxVal) || 0;
+                    if (val === 0) return '0,00%';
+                    return pesoPadrao > 0 ? formatPct(((val / pesoPadrao) * 100) - 100) : '-';
+                };
 
                 let boxesHtml = '';
                 for(let i=1; i<=8; i++) {
