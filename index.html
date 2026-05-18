@@ -284,12 +284,13 @@
             body.sidebar-open .sidebar-nav { transform: translateX(0); }
             body.sidebar-open .sidebar-form { transform: translateX(0); }
             
-            .main-panel { padding: 80px 15px 20px 15px; } /* Espaço para o menu hambúrguer */
+            .main-panel { padding: 80px 15px 20px 15px; }
             .header { flex-direction: column; align-items: flex-start; gap: 15px; }
             .header h1 { font-size: 20px; }
             .header-actions { width: 100%; justify-content: space-between; overflow-x: auto; padding-bottom: 5px;}
-            #dashboardCharts { grid-template-columns: 1fr !important; }
-            .form-scroll-area { padding-bottom: 80px; } /* Ajuste de scroll no mobile */
+            .chart-card.full-width { grid-column: span 1 !important; }
+            #dashMatriz, #dashPesoMachos, #dashPesoFemeas, #dashRealMeta { grid-template-columns: 1fr !important; }
+            .form-scroll-area { padding-bottom: 80px; }
         }
 
     </style>
@@ -473,22 +474,35 @@
 
     <aside class="sidebar-form">
         <div id="view-form-dashboard" style="display: none; flex-direction: column; height: 100%;">
-            <div class="form-header"><h2 class="section-title">Filtros Dashboard</h2><p style="font-size:10px; color:var(--text-muted); margin-top:-15px; margin-bottom:15px; margin-left:15px;">Módulo Peso Machos</p></div>
+            <div class="form-header"><h2 class="section-title">Filtros Dashboard</h2></div>
             <div class="form-scroll-area">
                 <div class="form-grid">
                     <div class="form-group full-width">
-                        <label>Granja</label>
-                        <select id="dashFilterGranja" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todas Granjas</option></select>
+                        <label>Módulo Principal</label>
+                        <select id="dashModule" class="form-select" onchange="switchDashboardModule()">
+                            <option value="matriz">Matriz</option>
+                            <option value="pesoFemeas">Peso Fêmeas</option>
+                            <option value="pesoMachos">Peso Machos</option>
+                            <option value="realMeta">Real x Meta</option>
+                        </select>
                     </div>
-                    <div class="form-group full-width">
-                        <label>Lote</label>
-                        <select id="dashFilterLote" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Lotes</option></select>
+                    
+                    <div id="filtrosPesoMachos" style="display:none; grid-column: span 2;" class="form-grid">
+                        <div class="divider-title" style="margin-top: 5px;">Filtros: Peso Machos</div>
+                        <div class="form-group full-width">
+                            <label>Granja</label>
+                            <select id="dashFilterGranja" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todas Granjas</option></select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Lote</label>
+                            <select id="dashFilterLote" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Lotes</option></select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Aviário</label>
+                            <select id="dashFilterAviario" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Aviários</option></select>
+                        </div>
+                        <button class="btn-submit full-width" onclick="updateDashboardPesoMachos(); toggleMobileSidebar();" style="margin-top:10px;">Atualizar Gráficos PM</button>
                     </div>
-                    <div class="form-group full-width">
-                        <label>Aviário</label>
-                        <select id="dashFilterAviario" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Aviários</option></select>
-                    </div>
-                    <button class="btn-submit full-width" onclick="updateDashboardPesoMachos(); toggleMobileSidebar();" style="margin-top:10px;">Atualizar Gráficos</button>
                 </div>
             </div>
         </div>
@@ -668,18 +682,45 @@
 
         <div id="view-table-dashboard" style="display: none; flex-direction: column; height: 100%; overflow-y: auto;">
             <header class="header" style="margin-bottom: 20px;">
-                <h1>Dashboard Estratégico (Peso Machos)</h1>
+                <h1 id="dashboardTitle">Dashboard Estratégico</h1>
                 <div class="header-actions">
                     <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
                 </div>
             </header>
             
-            <div id="dashboardEmptyState" style="display: flex; flex: 1; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; text-align: center; flex-direction: column; gap: 15px;">
+            <div id="dashboardEmptyState" style="display: none; flex: 1; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; text-align: center; flex-direction: column; gap: 15px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--red-vivid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-                <p>O dashboard estratégico só funciona mediante a informações registradas.<br>Cadastre dados na aba <b>Peso Machos</b> para gerar os gráficos automaticamente.</p>
+                <p>O dashboard estratégico só funciona mediante a informações registradas.<br>Cadastre dados na respectiva aba para gerar os gráficos automaticamente.</p>
             </div>
 
-            <div id="dashboardCharts" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px;">
+            <div id="dashMatriz" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Soma de Produção (Por Semana)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartMatriz1"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Ovos Para Incubatório (Soma Por Semana)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartMatriz4"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Indicadores de Qualidade (%)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartMatriz2"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Descartes e Avarias (%)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartMatriz3"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashPesoMachos" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
                 <div class="chart-card">
                     <h3>GAD Padrão x GAD Real</h3>
                     <div style="position: relative; height: 280px; width: 100%;">
@@ -705,6 +746,58 @@
                     </div>
                 </div>
             </div>
+
+            <div id="dashPesoFemeas" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
+                <div class="chart-card">
+                    <h3>GAD Padrão x GAD Real</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF1"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Peso Médio</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF2"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Uniformidade (UNIF)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF3"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Peso Médio x Peso Padrão</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF4"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Viabilidade (Meta x Real)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF5"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>% Mortalidade (Meta x Real)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF6"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>% Acima do Peso</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF7"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashRealMeta" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
+                <div class="chart-card full-width" style="grid-column: span 2; display: flex; align-items: center; justify-content: center; height: 200px;">
+                    <h3 style="text-align: center; color: var(--text-muted); width: 100%;">Módulo Real x Meta (Em Breve)</h3>
+                </div>
+            </div>
+
         </div>
         
         <div id="view-table-matriz" style="display: flex; flex-direction: column; height: 100%;">
@@ -898,10 +991,14 @@
 
         const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; 
         let inactivityInterval;
+        
+        // CACHES PARA O DASHBOARD
+        let dbMatriz = [];
+        let dbPesoFemeas = [];
 
         function applyCacheBuster(url) {
             if(!url) return url;
-            return url; // Removido o cachebuster automático para não recarregar fotos toda hora e resolver a lentidão
+            return url;
         }
 
         // --- SISTEMA MOBILE RESPONSIVO ---
@@ -1114,7 +1211,7 @@
                 loginScreen.style.display = 'none';
             }
             
-            updateDashboardPesoMachos();
+            switchDashboardModule(); // Init Dashboard UI
             startInactivityCheck();
         }
 
@@ -1358,6 +1455,224 @@
             }
         }
 
+        // --- SISTEMA DE GESTÃO DO DASHBOARD ---
+        let chartM1, chartM2, chartM3, chartM4;
+        let chartPF1, chartPF2, chartPF3, chartPF4, chartPF5, chartPF6, chartPF7;
+
+        function switchDashboardModule() {
+            const mod = document.getElementById('dashModule').value;
+            const titleMap = {
+                'matriz': 'Dashboard: Matriz',
+                'pesoMachos': 'Dashboard: Peso Machos',
+                'pesoFemeas': 'Dashboard: Peso Fêmeas',
+                'realMeta': 'Dashboard: Real x Meta'
+            };
+            
+            document.getElementById('dashboardTitle').innerText = titleMap[mod];
+
+            // Esconde Todos
+            document.getElementById('dashMatriz').style.display = 'none';
+            document.getElementById('dashPesoMachos').style.display = 'none';
+            document.getElementById('dashPesoFemeas').style.display = 'none';
+            document.getElementById('dashRealMeta').style.display = 'none';
+            document.getElementById('filtrosPesoMachos').style.display = 'none';
+
+            if(mod === 'matriz') {
+                updateDashboardMatriz();
+            } else if (mod === 'pesoMachos') {
+                document.getElementById('dashboardEmptyState').style.display = 'none';
+                document.getElementById('dashPesoMachos').style.display = 'grid';
+                document.getElementById('filtrosPesoMachos').style.display = 'grid';
+                updateDashboardPesoMachos(); 
+            } else if (mod === 'pesoFemeas') {
+                updateDashboardPesoFemeas();
+            } else if (mod === 'realMeta') {
+                document.getElementById('dashboardEmptyState').style.display = 'none';
+                document.getElementById('dashRealMeta').style.display = 'grid';
+            }
+        }
+
+        function updateDashboardMatriz() {
+            if(dbMatriz.length === 0) {
+                document.getElementById('dashboardEmptyState').style.display = 'flex';
+                document.getElementById('dashMatriz').style.display = 'none';
+                return;
+            }
+            document.getElementById('dashboardEmptyState').style.display = 'none';
+            document.getElementById('dashMatriz').style.display = 'grid';
+
+            const ag = {};
+            dbMatriz.forEach(d => {
+                let wk = parseInt(d.c_semana);
+                if(isNaN(wk)) return;
+                if(!ag[wk]) ag[wk] = { prod:0, peq:0, dgemas:0, sdesc:0, sninho:0, scama:0, olimpos:0, queb:0, trinc:0, def:0, inc:0 };
+                
+                ag[wk].prod += Number(d.c_producao) || 0;
+                ag[wk].peq += Number(d.c_pequenos) || 0;
+                ag[wk].dgemas += Number(d.c_duasgemas) || 0;
+                ag[wk].sdesc += Number(d.c_sujosdescartes) || 0;
+                ag[wk].sninho += Number(d.c_sujosninho) || 0;
+                ag[wk].scama += Number(d.c_sujoscama) || 0;
+                ag[wk].olimpos += Number(d.c_ovoslimpos) || 0;
+                ag[wk].queb += Number(d.c_quebrados) || 0;
+                ag[wk].trinc += Number(d.c_trincados) || 0;
+                ag[wk].def += Number(d.c_deformados) || 0;
+                ag[wk].inc += Number(d.c_ovosincubatorio) || 0;
+            });
+
+            const weeks = Object.keys(ag).map(Number).sort((a,b)=>a-b);
+            const labels = weeks.map(w => String(w));
+
+            const dataProd = weeks.map(w => ag[w].prod);
+            const dataInc = weeks.map(w => ag[w].inc);
+
+            const pct = (val, total) => total > 0 ? parseFloat(((val / total) * 100).toFixed(2)) : 0;
+
+            const dataPeq = weeks.map(w => pct(ag[w].peq, ag[w].prod));
+            const dataDgemas = weeks.map(w => pct(ag[w].dgemas, ag[w].prod));
+            const dataSdesc = weeks.map(w => pct(ag[w].sdesc, ag[w].prod));
+            const dataSninho = weeks.map(w => pct(ag[w].sninho, ag[w].prod));
+            const dataScama = weeks.map(w => pct(ag[w].scama, ag[w].prod));
+            const dataOlimpos = weeks.map(w => pct(ag[w].olimpos, ag[w].prod));
+
+            const dataQueb = weeks.map(w => pct(ag[w].queb, ag[w].prod));
+            const dataTrinc = weeks.map(w => pct(ag[w].trinc, ag[w].prod));
+            const dataDef = weeks.map(w => pct(ag[w].def, ag[w].prod));
+
+            const commonOptions = { 
+                responsive: true, maintainAspectRatio: false, color: '#ccc', 
+                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
+                plugins: { legend: { labels: { color: '#ccc' } } } 
+            };
+
+            if(chartM1) chartM1.destroy();
+            chartM1 = new Chart(document.getElementById('chartMatriz1'), { type: 'line', data: { labels, datasets: [{ label: 'Soma Produção', data: dataProd, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+
+            if(chartM2) chartM2.destroy();
+            chartM2 = new Chart(document.getElementById('chartMatriz2'), { type: 'line', data: { labels, datasets: [
+                { label: '% Pequenos', data: dataPeq, borderColor: '#e6193b', tension: 0.3 },
+                { label: '% Duas Gemas', data: dataDgemas, borderColor: '#ffd700', tension: 0.3 },
+                { label: '% Sujos Desc.', data: dataSdesc, borderColor: '#ff8c00', tension: 0.3 },
+                { label: '% Sujos Ninho', data: dataSninho, borderColor: '#8a2be2', tension: 0.3 },
+                { label: '% Sujos Cama', data: dataScama, borderColor: '#00ced1', tension: 0.3 },
+                { label: '% Ovos Limpos', data: dataOlimpos, borderColor: '#1db954', tension: 0.3 }
+            ] }, options: Object.assign({}, commonOptions, {scales: {y: {suggestedMax: 5, ticks: { color: '#888' }, grid: { color: '#333' } }}}) }); 
+
+            if(chartM3) chartM3.destroy();
+            chartM3 = new Chart(document.getElementById('chartMatriz3'), { type: 'line', data: { labels, datasets: [
+                { label: '% Quebrados', data: dataQueb, borderColor: '#e6193b', tension: 0.3 },
+                { label: '% Trincados', data: dataTrinc, borderColor: '#ff8c00', tension: 0.3 },
+                { label: '% Deformados', data: dataDef, borderColor: '#8a2be2', tension: 0.3 }
+            ] }, options: Object.assign({}, commonOptions, {scales: {y: {suggestedMax: 5, ticks: { color: '#888' }, grid: { color: '#333' } }}}) });
+
+            if(chartM4) chartM4.destroy();
+            chartM4 = new Chart(document.getElementById('chartMatriz4'), { type: 'line', data: { labels, datasets: [{ label: 'Soma Incubatório', data: dataInc, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+        }
+
+        function updateDashboardPesoFemeas() {
+            if(dbPesoFemeas.length === 0) {
+                document.getElementById('dashboardEmptyState').style.display = 'flex';
+                document.getElementById('dashPesoFemeas').style.display = 'none';
+                return;
+            }
+            document.getElementById('dashboardEmptyState').style.display = 'none';
+            document.getElementById('dashPesoFemeas').style.display = 'grid';
+
+            const ag = {};
+            dbPesoFemeas.forEach(d => {
+                let wk = parseInt(d.pf_semana);
+                if(isNaN(wk)) return;
+                if(!ag[wk]) ag[wk] = {
+                    count: 0,
+                    pesos: [], unifs: [],
+                    gadRealSum: 0, countGad: 0,
+                    metaSum: 0, realSum: 0, countV: 0,
+                    mMetaSum: 0, mRealSum: 0, countM: 0
+                };
+
+                for(let i=1; i<=8; i++) {
+                    let p = Number(d['pf_p'+i]); if(p>0) ag[wk].pesos.push(p);
+                    let u = Number(d['pf_u'+i]); if(u>0) ag[wk].unifs.push(u);
+                }
+
+                let gad = Number(d.pf_gad_real); if(gad>0) { ag[wk].gadRealSum += gad; ag[wk].countGad++; }
+                
+                let vMeta = Number(d.pf_meta); let vReal = Number(d.pf_real);
+                if(vMeta>0 || vReal>0) { ag[wk].metaSum += vMeta; ag[wk].realSum += vReal; ag[wk].countV++; }
+
+                let mMeta = Number(d.pf_m_meta); let mReal = Number(d.pf_m_real);
+                if(mMeta>0 || mReal>0) { ag[wk].mMetaSum += mMeta; ag[wk].mRealSum += mReal; ag[wk].countM++; }
+                
+                ag[wk].count++;
+            });
+
+            const weeks = Object.keys(ag).map(Number).sort((a,b)=>a-b);
+            const labels = weeks.map(w => String(w));
+
+            const avg = (sum, count) => count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+            const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : 0;
+
+            const dataGadP = weeks.map(w => Number((padraoDataCache[String(w)] || {}).pd_gad_f) || 0);
+            const dataGadR = weeks.map(w => avg(ag[w].gadRealSum, ag[w].countGad));
+
+            const dataPesoM = weeks.map(w => avgArr(ag[w].pesos));
+            const dataPesoP = weeks.map(w => Number((padraoDataCache[String(w)] || {}).pd_peso_f) || 0);
+
+            const dataUnif = weeks.map(w => avgArr(ag[w].unifs));
+
+            const dataViabMeta = weeks.map(w => avg(ag[w].metaSum, ag[w].countV));
+            const dataViabReal = weeks.map(w => avg(ag[w].realSum, ag[w].countV));
+
+            const dataMortMeta = weeks.map(w => avg(ag[w].mMetaSum, ag[w].countM));
+            const dataMortReal = weeks.map(w => avg(ag[w].mRealSum, ag[w].countM));
+
+            const dataAcima = weeks.map(w => {
+                let pM = avgArr(ag[w].pesos);
+                let pP = Number((padraoDataCache[String(w)] || {}).pd_peso_f) || 0;
+                return pP > 0 ? parseFloat((((pM / pP) * 100) - 100).toFixed(2)) : 0;
+            });
+
+            const commonOptions = { 
+                responsive: true, maintainAspectRatio: false, color: '#ccc', 
+                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
+                plugins: { legend: { labels: { color: '#ccc' } } } 
+            };
+
+            if(chartPF1) chartPF1.destroy();
+            chartPF1 = new Chart(document.getElementById('chartPF1'), { type: 'line', data: { labels, datasets: [
+                { label: 'GAD Padrão', data: dataGadP, borderColor: '#3b82f6', tension: 0.3 },
+                { label: 'GAD Real', data: dataGadR, borderColor: '#1db954', tension: 0.3 }
+            ] }, options: commonOptions });
+
+            if(chartPF2) chartPF2.destroy();
+            chartPF2 = new Chart(document.getElementById('chartPF2'), { type: 'line', data: { labels, datasets: [{ label: 'Peso Médio', data: dataPesoM, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+
+            if(chartPF3) chartPF3.destroy();
+            chartPF3 = new Chart(document.getElementById('chartPF3'), { type: 'line', data: { labels, datasets: [{ label: 'Uniformidade', data: dataUnif, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+
+            if(chartPF4) chartPF4.destroy();
+            chartPF4 = new Chart(document.getElementById('chartPF4'), { type: 'line', data: { labels, datasets: [
+                { label: 'Peso Padrão', data: dataPesoP, borderColor: '#3b82f6', tension: 0.3 },
+                { label: 'Peso Médio', data: dataPesoM, borderColor: '#e6193b', tension: 0.3 }
+            ] }, options: commonOptions });
+
+            if(chartPF5) chartPF5.destroy();
+            chartPF5 = new Chart(document.getElementById('chartPF5'), { type: 'line', data: { labels, datasets: [
+                { label: 'Viab. Meta', data: dataViabMeta, borderColor: '#3b82f6', tension: 0.3 },
+                { label: 'Viab. Real', data: dataViabReal, borderColor: '#1db954', tension: 0.3 }
+            ] }, options: commonOptions });
+
+            if(chartPF6) chartPF6.destroy();
+            chartPF6 = new Chart(document.getElementById('chartPF6'), { type: 'line', data: { labels, datasets: [
+                { label: 'Mort. Meta', data: dataMortMeta, borderColor: '#3b82f6', tension: 0.3 },
+                { label: 'Mort. Real', data: dataMortReal, borderColor: '#e6193b', tension: 0.3 }
+            ] }, options: commonOptions });
+
+            if(chartPF7) chartPF7.destroy();
+            chartPF7 = new Chart(document.getElementById('chartPF7'), { type: 'line', data: { labels, datasets: [{ label: '% Acima do Peso', data: dataAcima, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+        }
+
+
         // --- NAVEGAÇÃO DE ABAS ---
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -1376,7 +1691,10 @@
                 if(formView) formView.style.display = 'flex';
                 if(tableView) {
                     tableView.style.display = 'flex';
-                    if(tabName === 'dashboard') updateDashboardPesoMachos();
+                    if(tabName === 'dashboard') {
+                        document.getElementById('dashModule').value = 'matriz';
+                        switchDashboardModule(); 
+                    }
                 }
 
                 if(window.innerWidth <= 900) { toggleMobileSidebar(); }
@@ -1506,6 +1824,8 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
+            dbMatriz = []; // Alimentando os dados globais para o Dashboard
+
             let prevSemana = null;
             let prevQtdSaldoF = 0;
             let prevQtdSaldoM = 0;
@@ -1515,6 +1835,8 @@
                 
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
+                dbMatriz.push(d); // Adicionado ao Array
+
                 let dia = "-", mes = "-", ano = "-";
                 let dataFormatada = '-';
                 if(d.c_data) {
@@ -1568,8 +1890,8 @@
                 let f_pct = f_qtdSaldo ? formatPct((f_mort / f_qtdSaldo) * 100) : '0,00%';
                 let m_pct = m_qtdSaldo ? formatPct((m_mort / m_qtdSaldo) * 100) : '0,00%';
                 
-                let pctMachos = m_qtdSaldo ? formatPct((f_qtdSaldo / m_qtdSaldo) * 100) : '0,00%';
-                let qtdPct = m_qtdSaldo ? formatPct((Math.abs(f_qtdSaldo - m_qtdSaldo) / m_qtdSaldo) * 100) : '0,00%';
+                let pctMachos = f_qtdSaldo ? formatPct((m_qtdSaldo / f_qtdSaldo) * 100) : '0,00%';
+                let qtdPct = m_qtdSaldo ? formatPct((f_qtdSaldo / m_qtdSaldo) * 100) : '0,00%';
 
                 let p_producao = calcPct(producao, f_qtdSaldo);
                 let p_quebrados = calcPct(quebrados, producao);
@@ -1614,6 +1936,11 @@
                 prevQtdSaldoM = m_qtdSaldo;
             });
             restoreEditState('tableBody');
+
+            // Atualiza Dashboard caso esteja visível
+            if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'matriz') {
+                updateDashboardMatriz();
+            }
         });
 
         // PESO FÊMEAS
@@ -1633,9 +1960,14 @@
             if(!lastSnapPF) return;
             const tbody = document.getElementById('tableBodyPesoFemeas');
             tbody.innerHTML = '';
+            
+            dbPesoFemeas = []; // Popula array para o Dashboard
+            
             lastSnapPF.forEach(child => {
                 const d = child.val();
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                
+                dbPesoFemeas.push(d); // Adicionado ao array local
                 
                 let mes = "-", ano = "-";
                 if(d.pf_data) {
@@ -1676,6 +2008,11 @@
                 tbody.innerHTML += tr;
             });
             restoreEditState('tableBodyPesoFemeas');
+            
+            // Atualiza Dashboard caso esteja visível
+            if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'pesoFemeas') {
+                updateDashboardPesoFemeas();
+            }
         }
 
         database.ref('peso_femeas').orderByChild('ordem').on('value', (snapshot) => {
@@ -1809,7 +2146,7 @@
         });
 
         function updateDashboardPesoMachos() {
-            // Placeholder para atualizar os gráficos
+            // Placeholder original mantido para futura expansão dos dados específicos de peso machos
         }
     </script>
 </body>
