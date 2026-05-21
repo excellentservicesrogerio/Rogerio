@@ -86,11 +86,6 @@
         }
         .sidebar-nav::-webkit-scrollbar { display: none; }
 
-        /* ANIMAÇÃO DAS BORDAS DE PERFIL CIRÚRGICA */
-        @keyframes spinBorder {
-            100% { transform: rotate(360deg); }
-        }
-
         .nav-profile {
             width: 65px; height: 65px; border-radius: 50%;
             margin-bottom: 30px; cursor: pointer; position: relative;
@@ -100,18 +95,8 @@
         }
         .nav-profile:hover { transform: scale(1.05); }
         .nav-profile img { width: 57px; height: 57px; border-radius: 50%; object-fit: cover; z-index: 2; background: #222; }
-        .nav-profile.role-ouro { --glow-color: #ffd700; }
-        .nav-profile.role-prata { --glow-color: #ffffff; }
-        
-        .nav-profile.anim-active::before {
-            content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
-            background: conic-gradient(transparent 20%, var(--glow-color) 100%);
-            animation: spinBorder 2s linear infinite; z-index: 1;
-        }
-        .nav-profile.anim-active::after {
-            content: ''; position: absolute; width: 57px; height: 57px; border-radius: 50%;
-            background: var(--bg-panel); z-index: 1;
-        }
+        .nav-profile.role-ouro { border: 2px solid #ffd700; }
+        .nav-profile.role-prata { border: 2px solid #ffffff; }
 
         .nav-item {
             width: 100%; padding: 15px 0; text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
@@ -373,6 +358,22 @@
         </div>
     </div>
 
+    <div id="passEditModal" class="modal-overlay" style="z-index: 10002;">
+        <div class="profile-modal-wrapper" style="width: 320px;">
+            <div class="profile-modal-content">
+                <div class="modal-header-custom" style="border-bottom: 2px solid var(--red-vivid);">
+                    <h3>Visualizar/Alterar Senha</h3>
+                </div>
+                <div class="modal-body">
+                    <label style="color:var(--text-muted); font-size:12px;">Usuário: <span id="peUser" style="color:var(--red-vivid); font-weight:bold;"></span></label><br><br>
+                    <input type="text" id="pePass" class="form-input" placeholder="Senha Atual"><br><br>
+                    <button onclick="saveUserPassword()" class="btn-submit" style="margin-top:0;">Salvar Alteração</button>
+                    <button onclick="closePassEditModal()" class="btn-cancel" style="width:100%; margin-top:10px;">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="customAlertBox" class="modal-overlay">
         <div class="profile-modal-wrapper" style="width: 320px;">
             <div class="profile-modal-content">
@@ -460,12 +461,7 @@
                         <label>Nova Senha (Opcional)</label>
                         <input type="password" id="profNewPass" class="form-input" placeholder="Deixe em branco p/ manter">
                     </div>
-                    <div class="form-group full-width" style="margin-top: 10px;">
-                        <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; text-transform: none;">
-                            <input type="checkbox" id="profAnim" checked> Ativar animação circular no perfil
-                        </label>
-                    </div>
-                    <div class="full-width modal-actions">
+                    <div class="full-width modal-actions" style="margin-top: 15px;">
                         <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
                         <button type="button" class="btn-submit" id="btnSaveProfile" style="margin-top: 0;" onclick="saveProfile()">Salvar Perfil</button>
                     </div>
@@ -752,7 +748,7 @@
                     </div>
                 </div>
                 <div class="chart-card full-width" style="grid-column: span 2;">
-                    <h3>Ovos Para Incubatório (Soma Por Semana)</h3>
+                    <h3>% Ovos Para Incubatório</h3>
                     <div style="position: relative; height: 280px; width: 100%;">
                         <canvas id="chartMatriz4"></canvas>
                     </div>
@@ -844,8 +840,23 @@
             </div>
 
             <div id="dashRealMeta" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
-                <div class="chart-card full-width" style="grid-column: span 2; display: flex; align-items: center; justify-content: center; height: 200px;">
-                    <h3 style="text-align: center; color: var(--text-muted); width: 100%;">Módulo Real x Meta (Em Breve)</h3>
+                <div class="chart-card">
+                    <h3>Peso Ovo (Meta x Real)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartRM1"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Aproveitamento (Meta x Real)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartRM2"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Macho x Fêmea (Ideal x Máximo x Real)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartRM3"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -992,7 +1003,7 @@
                     <button class="control-btn pdf" onclick="exportPDF('padraoTable', 'Relatório Padrão')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
                     <button class="control-btn excel" onclick="exportExcel('padraoTable', 'Padrao')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
                     <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
-                    <button class="gear-btn" id="editToggleBtnPD" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnPD" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
                 </div>
             </header>
             <div class="table-container">
@@ -1047,6 +1058,7 @@
         let dbMatriz = [];
         let dbPesoFemeas = [];
         let dbPesoMachos = [];
+        let dbRealMeta = [];
 
         function applyCacheBuster(url) {
             if(!url) return url;
@@ -1153,8 +1165,7 @@
                         nome: nome,
                         senha: pass,
                         tipo: type,
-                        status: 'Pendente',
-                        animacaoPerfil: true
+                        status: 'Pendente'
                     }).then(() => {
                         showCustomAlert('Seu cadastro está em análise esperando autorização do administrador.', 'Sucesso!');
                         document.getElementById('registerForm').reset();
@@ -1171,10 +1182,10 @@
 
             if (user.toUpperCase() === 'DESENVOLVEDOR' && pass === '1709') { 
                 database.ref('users/DESENVOLVEDOR').once('value').then((snap) => {
-                    let d = snap.val() || { nome: 'Marcos Valério (Dev)', tipo: 'desenvolvedor', animacaoPerfil: true };
+                    let d = snap.val() || { nome: 'Marcos Valério (Dev)', tipo: 'desenvolvedor' };
                     loginSuccess('DESENVOLVEDOR', d, false);
                 }).catch(() => {
-                    loginSuccess('DESENVOLVEDOR', { nome: 'Marcos Valério (Dev)', tipo: 'desenvolvedor', animacaoPerfil: true }, false);
+                    loginSuccess('DESENVOLVEDOR', { nome: 'Marcos Valério (Dev)', tipo: 'desenvolvedor' }, false);
                 });
             } else {
                 database.ref('users/' + user).once('value').then((snapshot) => {
@@ -1211,17 +1222,18 @@
             
             let avatarUrl = userData.avatarUrl;
             let coverUrl = userData.coverUrl;
-            let animacaoAtiva = userData.animacaoPerfil !== false; 
             
             localStorage.setItem('sessionData', JSON.stringify({
                 username, fullname: loggedUserName, type: loggedUserType, 
-                avatarUrl, coverUrl, animacaoPerfil: animacaoAtiva
+                avatarUrl, coverUrl
             }));
             resetInactivityTimer();
 
+            // Controle da aba Padrão
+            document.getElementById('tab-padrao').style.display = (loggedUserType === 'comum') ? 'none' : 'block';
+
             document.getElementById('profName').value = loggedUserName;
             document.getElementById('profUser').value = username;
-            document.getElementById('profAnim').checked = animacaoAtiva;
             
             if(avatarUrl) {
                 document.getElementById('sidebarProfilePic').src = avatarUrl;
@@ -1245,12 +1257,6 @@
             } else {
                 document.getElementById('btn-acessos').style.display = 'none';
                 navProfile.classList.add('role-prata');
-            }
-            
-            if(animacaoAtiva) {
-                navProfile.classList.add('anim-active');
-            } else {
-                navProfile.classList.remove('anim-active');
             }
 
             const loginScreen = document.getElementById('login-screen');
@@ -1303,7 +1309,39 @@
             }, 50);
         };
 
-        // --- GESTÃO DE ACESSOS ---
+        // --- GESTÃO DE ACESSOS E SENHAS ---
+        let selectedUserForPass = '';
+
+        function openPassEditModal(userKey, currentPass) {
+            selectedUserForPass = userKey;
+            document.getElementById('peUser').innerText = userKey;
+            document.getElementById('pePass').value = currentPass;
+            document.getElementById('passEditModal').classList.add('active');
+        }
+
+        function closePassEditModal() {
+            document.getElementById('passEditModal').classList.remove('active');
+            selectedUserForPass = '';
+        }
+
+        // Fechar clicando fora da modal
+        document.getElementById('passEditModal').addEventListener('click', function(e) {
+            if(e.target === this) {
+                closePassEditModal();
+            }
+        });
+
+        function saveUserPassword() {
+            const newPass = document.getElementById('pePass').value;
+            if(newPass && selectedUserForPass) {
+                database.ref('users/' + selectedUserForPass).update({ senha: newPass }).then(() => {
+                    showCustomAlert("Senha atualizada com sucesso!", "Sucesso");
+                    closePassEditModal();
+                    loadAccessTable();
+                });
+            }
+        }
+
         function openAccessModal() { document.getElementById('accessModal').classList.add('active'); loadAccessTable(); }
         function closeAccessModal() { document.getElementById('accessModal').classList.remove('active'); }
 
@@ -1325,19 +1363,20 @@
                         <option value="admin" ${data.tipo === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>`;
 
-                    let passDisplay = loggedUserType === 'desenvolvedor' ? `<br><span style="font-size: 10px; color: var(--text-muted);">Senha: <span style="color: #fff;">${data.senha}</span></span>` : '';
+                    let nameHtml = data.nome;
+                    if(loggedUserType === 'desenvolvedor') {
+                        nameHtml = `<span style="cursor:pointer; color:var(--red-vivid); text-decoration:underline;" onclick="openPassEditModal('${userKey}', '${data.senha}')" title="Clique para ver/alterar senha">${data.nome}</span>`;
+                    }
 
                     let actionsHtml = `<select onchange="updateUserStatus('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;"><option value="Pendente" ${data.status === 'Pendente' ? 'selected' : ''}>Pendente</option><option value="Ativo" ${data.status === 'Ativo' ? 'selected' : ''}>Ativo</option><option value="Inativo" ${data.status === 'Inativo' ? 'selected' : ''}>Inativo</option></select>`;
-                    if (loggedUserType === 'desenvolvedor') { actionsHtml += `<button onclick="forcePasswordChange('${userKey}')" style="background:var(--red-vivid); color:#fff; border:none; padding:4px; border-radius:4px; cursor:pointer; margin-left:5px; font-size:10px;">Senha</button>`; }
 
-                    tbody.innerHTML += `<tr><td>${data.nome}${passDisplay}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${nameHtml}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
                 });
             });
         }
 
         function updateUserStatus(userKey, newStatus) { database.ref('users/' + userKey).update({ status: newStatus }).then(() => { loadAccessTable(); }); }
         function updateUserType(userKey, newType) { database.ref('users/' + userKey).update({ tipo: newType }).then(() => { showCustomAlert("Tipo de usuário atualizado!", "Sucesso"); loadAccessTable(); }); }
-        function forcePasswordChange(userKey) { const newPass = prompt("Digite a nova senha para o usuário " + userKey + ":"); if (newPass) { database.ref('users/' + userKey).update({ senha: newPass }).then(() => { showCustomAlert("Senha alterada com sucesso!", "Gestão de Acessos"); loadAccessTable(); }); } }
 
         // --- FULLSCREEN ---
         function toggleFullscreen() {
@@ -1427,11 +1466,11 @@
         function applyCrop() {
             if(!cropper) return;
             const canvas = cropper.getCroppedCanvas({
-                width: currentCropType === 'avatar' ? 400 : 1200,
-                height: currentCropType === 'avatar' ? 400 : 675
+                width: currentCropType === 'avatar' ? 250 : 800,
+                height: currentCropType === 'avatar' ? 250 : 450
             });
             
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
             
             if(currentCropType === 'avatar') {
                 pendingAvatarDataUrl = dataUrl;
@@ -1451,13 +1490,11 @@
             const novoNome = document.getElementById('profName').value;
             const senhaAtual = document.getElementById('profCurrentPass').value;
             const novaSenha = document.getElementById('profNewPass').value;
-            const animacaoAtiva = document.getElementById('profAnim').checked;
 
             try {
                 if(loggedUser) {
                     let updates = { 
-                        nome: novoNome,
-                        animacaoPerfil: animacaoAtiva 
+                        nome: novoNome
                     };
 
                     if (pendingAvatarDataUrl) {
@@ -1502,15 +1539,10 @@
                     
                     const currentSession = JSON.parse(localStorage.getItem('sessionData') || '{}');
                     currentSession.fullname = novoNome;
-                    currentSession.animacaoPerfil = animacaoAtiva;
                     if(updates.avatarUrl) currentSession.avatarUrl = updates.avatarUrl;
                     if(updates.coverUrl) currentSession.coverUrl = updates.coverUrl;
                     localStorage.setItem('sessionData', JSON.stringify(currentSession));
                     
-                    const navProfile = document.querySelector('.nav-profile');
-                    if(animacaoAtiva) navProfile.classList.add('anim-active');
-                    else navProfile.classList.remove('anim-active');
-
                     showCustomAlert('Perfil salvo com sucesso!', 'Sucesso');
                     closeModal(); 
                 } else {
@@ -1531,6 +1563,7 @@
         let chartM1, chartM2, chartM3, chartM4;
         let chartPF1, chartPF2, chartPF3, chartPF4, chartPF5, chartPF6, chartPF7;
         let chartPM1, chartPM2, chartPM3, chartPM4;
+        let chartRM1, chartRM2, chartRM3;
 
         function switchDashboardModule() {
             const mod = document.getElementById('dashModule').value;
@@ -1557,8 +1590,7 @@
             } else if (mod === 'pesoFemeas') {
                 updateDashboardPesoFemeas();
             } else if (mod === 'realMeta') {
-                document.getElementById('dashboardEmptyState').style.display = 'none';
-                document.getElementById('dashRealMeta').style.display = 'grid';
+                updateDashboardRealMeta();
             }
         }
 
@@ -1575,7 +1607,7 @@
             dbMatriz.forEach(d => {
                 let wk = parseInt(d.c_semana);
                 if(isNaN(wk)) return;
-                if(!ag[wk]) ag[wk] = { prod:0, peq:0, dgemas:0, sdesc:0, sninho:0, scama:0, olimpos:0, queb:0, trinc:0, def:0, inc:0 };
+                if(!ag[wk]) ag[wk] = { prod:0, peq:0, dgemas:0, sdesc:0, sninho:0, scama:0, ocom:0, olimpos:0, queb:0, trinc:0, def:0, inc:0 };
                 
                 ag[wk].prod += Number(d.c_producao) || 0;
                 ag[wk].peq += Number(d.c_pequenos) || 0;
@@ -1583,6 +1615,7 @@
                 ag[wk].sdesc += Number(d.c_sujosdescartes) || 0;
                 ag[wk].sninho += Number(d.c_sujosninho) || 0;
                 ag[wk].scama += Number(d.c_sujoscama) || 0;
+                ag[wk].ocom += Number(d.c_ovoscomercio) || 0;
                 ag[wk].olimpos += Number(d.c_ovoslimpos) || 0;
                 ag[wk].queb += Number(d.c_quebrados) || 0;
                 ag[wk].trinc += Number(d.c_trincados) || 0;
@@ -1594,20 +1627,22 @@
             const labels = weeks.map(w => String(w));
 
             const dataProd = weeks.map(w => ag[w].prod);
-            const dataInc = weeks.map(w => ag[w].inc);
 
             const pct = (val, total) => total > 0 ? parseFloat(((val / total) * 100).toFixed(2)) : 0;
 
-            const dataPeq = weeks.map(w => pct(ag[w].peq, ag[w].prod));
             const dataDgemas = weeks.map(w => pct(ag[w].dgemas, ag[w].prod));
-            const dataSdesc = weeks.map(w => pct(ag[w].sdesc, ag[w].prod));
-            const dataSninho = weeks.map(w => pct(ag[w].sninho, ag[w].prod));
+            const dataPeq = weeks.map(w => pct(ag[w].peq, ag[w].prod));
             const dataScama = weeks.map(w => pct(ag[w].scama, ag[w].prod));
+            const dataSninho = weeks.map(w => pct(ag[w].sninho, ag[w].prod));
+            const dataSdesc = weeks.map(w => pct(ag[w].sdesc, ag[w].prod));
+            const dataOcom = weeks.map(w => pct(ag[w].ocom, ag[w].prod));
             const dataOlimpos = weeks.map(w => pct(ag[w].olimpos, ag[w].prod));
 
             const dataQueb = weeks.map(w => pct(ag[w].queb, ag[w].prod));
             const dataTrinc = weeks.map(w => pct(ag[w].trinc, ag[w].prod));
             const dataDef = weeks.map(w => pct(ag[w].def, ag[w].prod));
+
+            const dataPctInc = weeks.map(w => pct(ag[w].inc, ag[w].prod));
 
             const commonOptions = { 
                 responsive: true, maintainAspectRatio: false, color: '#ccc', 
@@ -1615,19 +1650,23 @@
                 plugins: { legend: { labels: { color: '#ccc' } } } 
             };
 
+            // Gráfico 1: Produção
             if(chartM1) chartM1.destroy();
             chartM1 = new Chart(document.getElementById('chartMatriz1'), { type: 'line', data: { labels, datasets: [{ label: 'Soma Produção', data: dataProd, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
 
+            // Gráfico 2: Indicadores de Qualidade
             if(chartM2) chartM2.destroy();
             chartM2 = new Chart(document.getElementById('chartMatriz2'), { type: 'line', data: { labels, datasets: [
-                { label: '% Pequenos', data: dataPeq, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 },
                 { label: '% Duas Gemas', data: dataDgemas, borderColor: '#ffd700', backgroundColor: 'rgba(255, 215, 0, 0.1)', fill: true, tension: 0.3 },
-                { label: '% Sujos Desc.', data: dataSdesc, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
-                { label: '% Sujos Ninho', data: dataSninho, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 },
+                { label: '% Pequenos', data: dataPeq, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 },
                 { label: '% Sujos Cama', data: dataScama, borderColor: '#00ced1', backgroundColor: 'rgba(0, 206, 209, 0.1)', fill: true, tension: 0.3 },
+                { label: '% Sujos Ninho', data: dataSninho, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 },
+                { label: '% Sujos Desc.', data: dataSdesc, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
+                { label: '% Ovos Comércio', data: dataOcom, borderColor: '#ff1493', backgroundColor: 'rgba(255, 20, 147, 0.1)', fill: true, tension: 0.3 },
                 { label: '% Ovos Limpos', data: dataOlimpos, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
             ] }, options: Object.assign({}, commonOptions, {scales: {y: {suggestedMax: 5, ticks: { color: '#888' }, grid: { color: '#333' } }}}) }); 
 
+            // Gráfico 3: Descartes e Avarias
             if(chartM3) chartM3.destroy();
             chartM3 = new Chart(document.getElementById('chartMatriz3'), { type: 'line', data: { labels, datasets: [
                 { label: '% Quebrados', data: dataQueb, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 },
@@ -1635,8 +1674,9 @@
                 { label: '% Deformados', data: dataDef, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }
             ] }, options: Object.assign({}, commonOptions, {scales: {y: {suggestedMax: 5, ticks: { color: '#888' }, grid: { color: '#333' } }}}) });
 
+            // Gráfico 4: % Ovos Para Incubatório
             if(chartM4) chartM4.destroy();
-            chartM4 = new Chart(document.getElementById('chartMatriz4'), { type: 'line', data: { labels, datasets: [{ label: 'Soma Incubatório', data: dataInc, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+            chartM4 = new Chart(document.getElementById('chartMatriz4'), { type: 'line', data: { labels, datasets: [{ label: '% Ovos P/ Incubatório', data: dataPctInc, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
         }
 
         function updateDashboardPesoFemeas() {
@@ -2214,9 +2254,14 @@
         database.ref('real_meta').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBodyRealMeta');
             tbody.innerHTML = '';
+            
+            dbRealMeta = []; // Popula array para o Dashboard
+
             snapshot.forEach(child => {
                 const d = child.val();
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                
+                dbRealMeta.push(d); // Adicionado ao array local
 
                 let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'real_meta')" ondragend="handleDragEnd.call(this, event)">
                     <td>${d.tecnico || '-'}</td><td data-field="rm_lote">${d.rm_lote || '-'}</td><td data-field="rm_aviario">${d.rm_aviario || '-'}</td><td data-field="rm_semana">${d.rm_semana || '-'}</td>
@@ -2228,6 +2273,11 @@
                 tbody.innerHTML += tr;
             });
             restoreEditState('tableBodyRealMeta');
+
+            // Atualiza Dashboard caso esteja visível
+            if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'realMeta') {
+                updateDashboardRealMeta();
+            }
         });
 
         // Toggle Modo Edição, Exclusão e Drag & Drop
@@ -2350,6 +2400,94 @@
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: 'Uniformidade', data: dataUni, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+        }
+
+        // Dashboard Real x Meta Lógica de Construção
+        function updateDashboardRealMeta() {
+            if(dbRealMeta.length === 0) {
+                document.getElementById('dashboardEmptyState').style.display = 'flex';
+                document.getElementById('dashRealMeta').style.display = 'none';
+                return;
+            }
+            document.getElementById('dashboardEmptyState').style.display = 'none';
+            document.getElementById('dashRealMeta').style.display = 'grid';
+
+            const ag = {};
+            dbRealMeta.forEach(d => {
+                let wk = parseInt(d.rm_semana);
+                if(isNaN(wk)) return;
+                
+                if(!ag[wk]) {
+                    ag[wk] = {
+                        pesoMeta: [], pesoReal: [],
+                        aprovMeta: [], aprovReal: [],
+                        mxfIdeal: [], mxfMaximo: [], mxfReal: []
+                    };
+                }
+
+                let pM = Number(d.rm_peso_meta); if(pM > 0) ag[wk].pesoMeta.push(pM);
+                let pR = Number(d.rm_peso_real); if(pR > 0) ag[wk].pesoReal.push(pR);
+                let aM = Number(d.rm_aprov_meta); if(aM > 0) ag[wk].aprovMeta.push(aM);
+                let aR = Number(d.rm_aprov_real); if(aR > 0) ag[wk].aprovReal.push(aR);
+                let iD = Number(d.rm_mxf_ideal); if(iD > 0) ag[wk].mxfIdeal.push(iD);
+                let mx = Number(d.rm_mxf_maximo); if(mx > 0) ag[wk].mxfMaximo.push(mx);
+                let rL = Number(d.rm_mxf_real); if(rL > 0) ag[wk].mxfReal.push(rL);
+            });
+
+            const weeks = Object.keys(ag).map(Number).sort((a,b)=>a-b);
+            const labels = weeks.map(w => String(w));
+
+            const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : 0;
+
+            const dataPesoMeta = weeks.map(w => avgArr(ag[w].pesoMeta));
+            const dataPesoReal = weeks.map(w => avgArr(ag[w].pesoReal));
+
+            const dataAprovMeta = weeks.map(w => avgArr(ag[w].aprovMeta));
+            const dataAprovReal = weeks.map(w => avgArr(ag[w].aprovReal));
+
+            const dataMxfIdeal = weeks.map(w => avgArr(ag[w].mxfIdeal));
+            const dataMxfMaximo = weeks.map(w => avgArr(ag[w].mxfMaximo));
+            const dataMxfReal = weeks.map(w => avgArr(ag[w].mxfReal));
+
+            const commonOptions = { 
+                responsive: true, maintainAspectRatio: false, color: '#ccc', 
+                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
+                plugins: { legend: { labels: { color: '#ccc' } } } 
+            };
+
+            // Gráfico 1: Peso Ovo (Meta: Bar, Real: Line)
+            if(chartRM1) chartRM1.destroy();
+            chartRM1 = new Chart(document.getElementById('chartRM1'), { 
+                type: 'bar', 
+                data: { labels, datasets: [
+                    { type: 'bar', label: 'Meta', data: dataPesoMeta, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: '#3b82f6', borderWidth: 1 },
+                    { type: 'line', label: 'Real', data: dataPesoReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 2: Aproveitamento (Meta: Bar, Real: Line)
+            if(chartRM2) chartRM2.destroy();
+            chartRM2 = new Chart(document.getElementById('chartRM2'), { 
+                type: 'bar', 
+                data: { labels, datasets: [
+                    { type: 'bar', label: 'Meta', data: dataAprovMeta, backgroundColor: 'rgba(255, 140, 0, 0.7)', borderColor: '#ff8c00', borderWidth: 1 },
+                    { type: 'line', label: 'Real', data: dataAprovReal, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 3: Macho x Fêmea (Ideal x Máximo x Real - Todas Linhas)
+            if(chartRM3) chartRM3.destroy();
+            chartRM3 = new Chart(document.getElementById('chartRM3'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: 'Ideal', data: dataMxfIdeal, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Máximo', data: dataMxfMaximo, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Real', data: dataMxfReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
                 ] }, 
                 options: commonOptions 
             });
