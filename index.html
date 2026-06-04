@@ -505,7 +505,9 @@
         <div class="nav-item" id="tab-peso-femeas">Peso Fêmeas</div>
         <div class="nav-item" id="tab-peso-machos">Peso Machos</div>
         <div class="nav-item" id="tab-real-meta">Real x Meta</div>
+        <div class="nav-item" id="tab-fertilidade">Fertilidade</div>
         <div class="nav-item nav-item-special" id="tab-padrao">Padrão</div>
+        <div class="nav-item nav-item-special" id="tab-padrao-fert" style="margin-top: 0;">Padrão Fert.</div>
         
         <div class="nav-item" id="btn-acessos" style="display: none; margin-top: 10px; color: var(--red-vivid);" onclick="openAccessModal()">Acessos</div>
         
@@ -697,6 +699,29 @@
             </div>
         </div>
 
+        <div id="view-form-fertilidade" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Fertilidade</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroFertilidadeForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>FX Matriz</label><input type="text" id="ft_fx_matriz" class="form-input" required></div>
+                    <div class="form-group full-width"><label>Idade (Busca automática do STD)</label><input type="number" id="ft_idade" class="form-input" required></div>
+                    
+                    <div class="divider-title">Lotes (%)</div>
+                    <div class="form-group"><label>Lote 0224ET (%)</label><input type="number" step="0.01" id="ft_lote_0224et" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0324NL (%)</label><input type="number" step="0.01" id="ft_lote_0324nl" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0324AC (%)</label><input type="number" step="0.01" id="ft_lote_0324ac" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0324BB (%)</label><input type="number" step="0.01" id="ft_lote_0324bb" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0524LB (%)</label><input type="number" step="0.01" id="ft_lote_0524lb" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0624ER (%)</label><input type="number" step="0.01" id="ft_lote_0624er" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0624BC (%)</label><input type="number" step="0.01" id="ft_lote_0624bc" class="form-input"></div>
+                    <div class="form-group"><label>Lote 0724SR (%)</label><input type="number" step="0.01" id="ft_lote_0724sr" class="form-input"></div>
+
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+
         <div id="view-form-padrao" style="display: none; flex-direction: column; height: 100%;">
             <div class="form-header"><h2 class="section-title">Cadastro Padrão</h2></div>
             <div class="form-scroll-area">
@@ -723,6 +748,21 @@
                 </form>
             </div>
         </div>
+
+        <div id="view-form-padrao-fert" style="display: none; flex-direction: column; height: 100%;">
+            <div class="form-header"><h2 class="section-title">Cadastro Padrão Fert.</h2></div>
+            <div class="form-scroll-area">
+                <form class="form-grid" id="cadastroPadraoFertForm">
+                    <div class="divider-title">Dados Gerais</div>
+                    <div class="form-group full-width"><label>FX Matriz</label><input type="text" id="pfert_fx_matriz" class="form-input" required></div>
+                    <div class="form-group"><label>Idade</label><input type="number" id="pfert_idade" class="form-input" required></div>
+                    <div class="form-group"><label>STD (%)</label><input type="number" step="0.01" id="pfert_std" class="form-input" required></div>
+                    
+                    <button type="submit" class="btn-submit full-width">Finalizar Lançamento</button>
+                </form>
+            </div>
+        </div>
+
     </aside>
 
     <main class="main-panel">
@@ -869,7 +909,7 @@
                     <button class="control-btn pdf" onclick="exportPDF('mainTable', 'Relatório de Matriz')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
                     <button class="control-btn excel" onclick="exportExcel('mainTable', 'Matriz')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
                     <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
-                    <button class="gear-btn" id="editToggleBtn" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtn" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
                 </div>
             </header>
             <div class="table-container">
@@ -932,7 +972,7 @@
                     <button class="control-btn pdf" onclick="exportPDF('pesoMachosTable', 'Relatório Peso Machos')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
                     <button class="control-btn excel" onclick="exportExcel('pesoMachosTable', 'PesoMachos')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
                     <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
-                    <button class="gear-btn" id="editToggleBtnPM" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnPM" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
                 </div>
             </header>
             <div class="table-container">
@@ -996,6 +1036,38 @@
             </div>
         </div>
 
+        <div id="view-table-fertilidade" style="display: none; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório Fertilidade</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('fertilidadeTable', 'Relatório Fertilidade')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('fertilidadeTable', 'Fertilidade')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnFT" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório Fertilidade - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDateFertilidade"></span></p></div>
+                <table class="data-table" id="fertilidadeTable">
+                    <thead>
+                        <tr>
+                            <th>FX MATRIZ</th><th>IDADE</th><th>STD</th><th>REAL</th><th>%IEF</th><th>%LACUNA</th><th>%DESVIO</th>
+                            <th>LOTE 0224ET</th><th>%LACUNA</th>
+                            <th>LOTE 0324NL</th><th>%LACUNA2</th>
+                            <th>LOTE 0324AC</th><th>%LACUNA3</th>
+                            <th>LOTE 0324BB</th><th>%LACUNA4</th>
+                            <th>LOTE 0524LB</th><th>%LACUNA5</th>
+                            <th>LOTE 0624ER</th><th>%LACUNA6</th>
+                            <th>LOTE 0624BC</th><th>%LACUNA7</th>
+                            <th>LOTE 0724SR</th><th>%LACUNA8</th>
+                            <th class="action-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyFertilidade"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div id="view-table-padrao" style="display: none; flex-direction: column; height: 100%;">
             <header class="header">
                 <h1>Relatório Padrão</h1>
@@ -1015,6 +1087,29 @@
                         </tr>
                     </thead>
                     <tbody id="tableBodyPadrao"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-table-padrao-fert" style="display: none; flex-direction: column; height: 100%;">
+            <header class="header">
+                <h1>Relatório Padrão Fert.</h1>
+                <div class="header-actions">
+                    <button class="control-btn pdf" onclick="exportPDF('padraoFertTable', 'Relatório Padrão Fert')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> PDF</button>
+                    <button class="control-btn excel" onclick="exportExcel('padraoFertTable', 'PadraoFert')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2v4H8z"></path><path d="M14 13h2v4h-2z"></path></svg> Excel</button>
+                    <button class="gear-btn" onclick="toggleFullscreen()" title="Tela Cheia"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
+                    <button class="gear-btn" id="editToggleBtnPFERT" title="Ativar Modo Edição"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
+                </div>
+            </header>
+            <div class="table-container">
+                <div class="pdf-header"><h2>Relatório Padrão Fert. - Sistema High Performance</h2><p>Data de exportação: <span id="pdfDatePadraoFert"></span></p></div>
+                <table class="data-table" id="padraoFertTable">
+                    <thead>
+                        <tr>
+                            <th>FX MATRIZ</th><th>IDADE</th><th>STD</th><th class="calc-header">Infertil STD</th><th class="action-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBodyPadraoFert"></tbody>
                 </table>
             </div>
         </div>
@@ -1054,11 +1149,16 @@
         const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; 
         let inactivityInterval;
         
-        // CACHES PARA O DASHBOARD
+        // CACHES PARA O DASHBOARD E CÁLCULOS CRUZADOS
         let dbMatriz = [];
         let dbPesoFemeas = [];
         let dbPesoMachos = [];
         let dbRealMeta = [];
+        let padraoDataCache = {};
+        let padraoFertCache = {};
+        let lastSnapPF = null;
+        let lastSnapPM = null;
+        let lastSnapFert = null;
 
         function applyCacheBuster(url) {
             if(!url) return url;
@@ -1229,8 +1329,14 @@
             }));
             resetInactivityTimer();
 
-            // Controle da aba Padrão
-            document.getElementById('tab-padrao').style.display = (loggedUserType === 'comum') ? 'none' : 'block';
+            // Controle das abas Padrão e Padrão Fert
+            if(loggedUserType === 'comum') {
+                document.getElementById('tab-padrao').style.display = 'none';
+                document.getElementById('tab-padrao-fert').style.display = 'none';
+            } else {
+                document.getElementById('tab-padrao').style.display = 'block';
+                document.getElementById('tab-padrao-fert').style.display = 'block';
+            }
 
             document.getElementById('profName').value = loggedUserName;
             document.getElementById('profUser').value = username;
@@ -1906,11 +2012,6 @@
             }
         }
 
-        // Caching global para dados da aba Padrão
-        let padraoDataCache = {};
-        let lastSnapPF = null;
-        let lastSnapPM = null;
-
         database.ref('padrao').orderByChild('ordem').on('value', (snapshot) => {
             const tbody = document.getElementById('tableBodyPadrao');
             tbody.innerHTML = '';
@@ -1935,6 +2036,58 @@
             if(lastSnapPM) renderPesoMachos();
         });
 
+
+        // Função utilitária para extrair número limpo de campos com % e vírgula
+        const parseField = (val) => {
+            if (val === undefined || val === null || String(val).trim() === '') return NaN;
+            let str = String(val).replace('%', '').trim();
+            if (str.includes(',')) {
+                str = str.replace(/\./g, '').replace(',', '.');
+            }
+            return parseFloat(str);
+        };
+
+        // PADRÃO FERTILIDADE (NOVO)
+        document.getElementById('cadastroPadraoFertForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroPadraoFertForm');
+            data.tecnico = loggedUserName;
+            data.userId = loggedUser; 
+            data.ordem = Date.now();
+            
+            database.ref('padrao_fert').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroPadraoFertForm').reset();
+            });
+        });
+
+        database.ref('padrao_fert').orderByChild('ordem').on('value', (snapshot) => {
+            const tbody = document.getElementById('tableBodyPadraoFert');
+            if(tbody) tbody.innerHTML = '';
+            padraoFertCache = {};
+            
+            snapshot.forEach(child => {
+                const d = child.val();
+                if(d.pfert_idade) { padraoFertCache[String(d.pfert_idade)] = d; }
+                
+                let std = parseField(d.pfert_std);
+                let validStd = !isNaN(std);
+                
+                let infertilVal = validStd ? formatNum(100 - std) + '%' : '-';
+                let displayStd = validStd ? formatNum(std) + '%' : '-';
+
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'padrao_fert')" ondragend="handleDragEnd.call(this, event)">
+                    <td data-field="pfert_fx_matriz">${d.pfert_fx_matriz||'-'}</td>
+                    <td data-field="pfert_idade">${d.pfert_idade||'-'}</td>
+                    <td data-field="pfert_std">${d.pfert_std !== undefined && d.pfert_std !== '' ? displayStd : '-'}</td>
+                    <td class="calc-header">${infertilVal}</td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('padrao_fert', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('padrao_fert/${child.key}')">Excluir</button></td>
+                </tr>`;
+                if(tbody) tbody.innerHTML += tr;
+            });
+            restoreEditState('tableBodyPadraoFert');
+            if(lastSnapFert) renderFertilidade(); // Atualiza a aba Fertilidade com os novos STDs
+        });
 
         // MATRIZ
         document.getElementById('cadastroMatrizForm').addEventListener('submit', (e) => {
@@ -2021,7 +2174,7 @@
                 let m_pct = m_qtdSaldo ? formatPct((m_mort / m_qtdSaldo) * 100) : '0,00%';
                 
                 let pctMachos = f_qtdSaldo ? formatPct((m_qtdSaldo / f_qtdSaldo) * 100) : '0,00%';
-                let qtdPct = m_qtdSaldo ? formatPct((f_qtdSaldo / m_qtdSaldo) * 100) : '0,00%';
+                let qtdPct = f_qtdSaldo ? formatPct((m_qtdSaldo / f_qtdSaldo) * 100) : '0,00%'; // Invertido conforme solicitado
 
                 let p_producao = calcPct(producao, f_qtdSaldo);
                 let p_quebrados = calcPct(quebrados, producao);
@@ -2280,8 +2433,102 @@
             }
         });
 
+        // FERTILIDADE
+        document.getElementById('cadastroFertilidadeForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = getFormData('cadastroFertilidadeForm');
+            data.tecnico = loggedUserName;
+            data.userId = loggedUser; 
+            data.ordem = Date.now();
+            
+            database.ref('fertilidade').push(data).then(() => {
+                showCustomAlert('Lançamento salvo com sucesso!');
+                document.getElementById('cadastroFertilidadeForm').reset();
+            });
+        });
+
+        function renderFertilidade() {
+            if(!lastSnapFert) return;
+            const tbody = document.getElementById('tableBodyFertilidade');
+            tbody.innerHTML = '';
+            
+            lastSnapFert.forEach(child => {
+                const d = child.val();
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                
+                let padrao = padraoFertCache[String(d.ft_idade)] || {};
+                let std = parseField(padrao.pfert_std);
+                let displayStd = !isNaN(std) ? formatNum(std) + '%' : '-';
+
+                let lotesValidos = [];
+
+                let lote1 = parseField(d.ft_lote_0224et); if(!isNaN(lote1)) lotesValidos.push(lote1);
+                let lote2 = parseField(d.ft_lote_0324nl); if(!isNaN(lote2)) lotesValidos.push(lote2);
+                let lote3 = parseField(d.ft_lote_0324ac); if(!isNaN(lote3)) lotesValidos.push(lote3);
+                let lote4 = parseField(d.ft_lote_0324bb); if(!isNaN(lote4)) lotesValidos.push(lote4);
+                let lote5 = parseField(d.ft_lote_0524lb); if(!isNaN(lote5)) lotesValidos.push(lote5);
+                let lote6 = parseField(d.ft_lote_0624er); if(!isNaN(lote6)) lotesValidos.push(lote6);
+                let lote7 = parseField(d.ft_lote_0624bc); if(!isNaN(lote7)) lotesValidos.push(lote7);
+                let lote8 = parseField(d.ft_lote_0724sr); if(!isNaN(lote8)) lotesValidos.push(lote8);
+
+                let realVal = lotesValidos.length > 0 ? lotesValidos.reduce((a, b) => a + b, 0) / lotesValidos.length : 0;
+                let real = lotesValidos.length > 0 ? formatNum(realVal) + '%' : '-';
+                
+                let ief = (!isNaN(std) && std > 0 && lotesValidos.length > 0) ? calcPct(realVal, std) : '-';
+                let lacunaVal = realVal - std;
+                
+                let lacuna = (lotesValidos.length > 0 && !isNaN(std)) ? formatNum(lacunaVal) + '%' : '-';
+                let desvio = (realVal > 0 && !isNaN(std)) ? calcPct(lacunaVal, realVal) : '-';
+
+                const calcL = (val) => {
+                    let v = parseField(val);
+                    return (!isNaN(v) && !isNaN(std)) ? formatNum(v - std) + '%' : '-';
+                };
+                
+                const displayL = (val) => {
+                    let v = parseField(val);
+                    return !isNaN(v) ? formatNum(v) + '%' : '-';
+                };
+
+                let lacuna1 = calcL(d.ft_lote_0224et);
+                let lacuna2 = calcL(d.ft_lote_0324nl);
+                let lacuna3 = calcL(d.ft_lote_0324ac);
+                let lacuna4 = calcL(d.ft_lote_0324bb);
+                let lacuna5 = calcL(d.ft_lote_0524lb);
+                let lacuna6 = calcL(d.ft_lote_0624er);
+                let lacuna7 = calcL(d.ft_lote_0624bc);
+                let lacuna8 = calcL(d.ft_lote_0724sr);
+
+                let tr = `<tr draggable="true" data-key="${child.key}" data-ordem="${d.ordem || 0}" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver.call(this, event)" ondrop="handleDrop.call(this, event, 'fertilidade')" ondragend="handleDragEnd.call(this, event)">
+                    <td data-field="ft_fx_matriz">${d.ft_fx_matriz || '-'}</td>
+                    <td data-field="ft_idade">${d.ft_idade || '-'}</td>
+                    <td class="calc-header">${displayStd}</td>
+                    <td class="calc-header">${real}</td>
+                    <td class="calc-header">${ief}</td>
+                    <td class="calc-header">${lacuna}</td>
+                    <td class="calc-header">${desvio}</td>
+                    <td data-field="ft_lote_0224et">${d.ft_lote_0224et !== undefined && d.ft_lote_0224et !== '' ? displayL(d.ft_lote_0224et) : '-'}</td><td class="calc-header">${lacuna1}</td>
+                    <td data-field="ft_lote_0324nl">${d.ft_lote_0324nl !== undefined && d.ft_lote_0324nl !== '' ? displayL(d.ft_lote_0324nl) : '-'}</td><td class="calc-header">${lacuna2}</td>
+                    <td data-field="ft_lote_0324ac">${d.ft_lote_0324ac !== undefined && d.ft_lote_0324ac !== '' ? displayL(d.ft_lote_0324ac) : '-'}</td><td class="calc-header">${lacuna3}</td>
+                    <td data-field="ft_lote_0324bb">${d.ft_lote_0324bb !== undefined && d.ft_lote_0324bb !== '' ? displayL(d.ft_lote_0324bb) : '-'}</td><td class="calc-header">${lacuna4}</td>
+                    <td data-field="ft_lote_0524lb">${d.ft_lote_0524lb !== undefined && d.ft_lote_0524lb !== '' ? displayL(d.ft_lote_0524lb) : '-'}</td><td class="calc-header">${lacuna5}</td>
+                    <td data-field="ft_lote_0624er">${d.ft_lote_0624er !== undefined && d.ft_lote_0624er !== '' ? displayL(d.ft_lote_0624er) : '-'}</td><td class="calc-header">${lacuna6}</td>
+                    <td data-field="ft_lote_0624bc">${d.ft_lote_0624bc !== undefined && d.ft_lote_0624bc !== '' ? displayL(d.ft_lote_0624bc) : '-'}</td><td class="calc-header">${lacuna7}</td>
+                    <td data-field="ft_lote_0724sr">${d.ft_lote_0724sr !== undefined && d.ft_lote_0724sr !== '' ? displayL(d.ft_lote_0724sr) : '-'}</td><td class="calc-header">${lacuna8}</td>
+                    <td class="action-col"><button class="btn-save" type="button" onclick="saveRow('fertilidade', '${child.key}', this)">Salvar</button><button class="btn-delete" type="button" onclick="deleteRecord('fertilidade/${child.key}')">Excluir</button></td>
+                </tr>`;
+                tbody.innerHTML += tr;
+            });
+            restoreEditState('tableBodyFertilidade');
+        }
+
+        database.ref('fertilidade').orderByChild('ordem').on('value', (snapshot) => {
+            lastSnapFert = snapshot;
+            renderFertilidade();
+        });
+
         // Toggle Modo Edição, Exclusão e Drag & Drop
-        ['', 'PF', 'PM', 'RM', 'PD'].forEach(suf => {
+        ['', 'PF', 'PM', 'RM', 'PD', 'FT', 'PFERT'].forEach(suf => {
             const btn = document.getElementById(`editToggleBtn${suf}`);
             if(btn) {
                 btn.addEventListener('click', function() {
