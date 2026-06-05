@@ -321,7 +321,7 @@
             .header h1 { font-size: 20px; }
             .header-actions { width: 100%; justify-content: space-between; overflow-x: auto; padding-bottom: 5px;}
             .chart-card.full-width { grid-column: span 1 !important; }
-            #dashMatriz, #dashPesoMachos, #dashPesoFemeas, #dashRealMeta { grid-template-columns: 1fr !important; }
+            #dashMatriz, #dashPesoMachos, #dashPesoFemeas, #dashRealMeta, #dashFertilidade { grid-template-columns: 1fr !important; }
             .form-scroll-area { padding-bottom: 80px; }
         }
 
@@ -533,6 +533,7 @@
                             <option value="pesoFemeas">Peso Fêmeas</option>
                             <option value="pesoMachos">Peso Machos</option>
                             <option value="realMeta">Real x Meta</option>
+                            <option value="fertilidade">Fertilidade</option>
                         </select>
                     </div>
                     
@@ -900,6 +901,33 @@
                 </div>
             </div>
 
+            <div id="dashFertilidade" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
+                <div class="chart-card">
+                    <h3>STD x Real (%)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartFert1"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Lacuna Média x Desvio (%)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartFert2"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Evolução dos Lotes (%)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartFert3"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>% IEF (Índice de Eficiência)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartFert4"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
         
         <div id="view-table-matriz" style="display: flex; flex-direction: column; height: 100%;">
@@ -1154,6 +1182,7 @@
         let dbPesoFemeas = [];
         let dbPesoMachos = [];
         let dbRealMeta = [];
+        let dbFertilidade = [];
         let padraoDataCache = {};
         let padraoFertCache = {};
         let lastSnapPF = null;
@@ -1445,6 +1474,8 @@
                     closePassEditModal();
                     loadAccessTable();
                 });
+            } else {
+                showCustomAlert("A senha não pode estar vazia.", "Erro");
             }
         }
 
@@ -1469,9 +1500,11 @@
                         <option value="admin" ${data.tipo === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>`;
 
+                    // Ajuste de escape seguro da senha para o atributo onclick não quebrar
+                    let safePass = (data.senha || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     let nameHtml = data.nome;
                     if(loggedUserType === 'desenvolvedor') {
-                        nameHtml = `<span style="cursor:pointer; color:var(--red-vivid); text-decoration:underline;" onclick="openPassEditModal('${userKey}', '${data.senha}')" title="Clique para ver/alterar senha">${data.nome}</span>`;
+                        nameHtml = `<span style="cursor:pointer; color:var(--red-vivid); text-decoration:underline;" onclick="openPassEditModal('${userKey}', '${safePass}')" title="Clique para ver/alterar senha">${data.nome}</span>`;
                     }
 
                     let actionsHtml = `<select onchange="updateUserStatus('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;"><option value="Pendente" ${data.status === 'Pendente' ? 'selected' : ''}>Pendente</option><option value="Ativo" ${data.status === 'Ativo' ? 'selected' : ''}>Ativo</option><option value="Inativo" ${data.status === 'Inativo' ? 'selected' : ''}>Inativo</option></select>`;
@@ -1670,6 +1703,7 @@
         let chartPF1, chartPF2, chartPF3, chartPF4, chartPF5, chartPF6, chartPF7;
         let chartPM1, chartPM2, chartPM3, chartPM4;
         let chartRM1, chartRM2, chartRM3;
+        let chartFert1, chartFert2, chartFert3, chartFert4;
 
         function switchDashboardModule() {
             const mod = document.getElementById('dashModule').value;
@@ -1677,7 +1711,8 @@
                 'matriz': 'Dashboard: Matriz',
                 'pesoMachos': 'Dashboard: Peso Machos',
                 'pesoFemeas': 'Dashboard: Peso Fêmeas',
-                'realMeta': 'Dashboard: Real x Meta'
+                'realMeta': 'Dashboard: Real x Meta',
+                'fertilidade': 'Dashboard: Fertilidade'
             };
             
             document.getElementById('dashboardTitle').innerText = titleMap[mod];
@@ -1687,6 +1722,7 @@
             document.getElementById('dashPesoMachos').style.display = 'none';
             document.getElementById('dashPesoFemeas').style.display = 'none';
             document.getElementById('dashRealMeta').style.display = 'none';
+            document.getElementById('dashFertilidade').style.display = 'none';
             document.getElementById('filtrosPesoMachos').style.display = 'none';
 
             if(mod === 'matriz') {
@@ -1697,6 +1733,8 @@
                 updateDashboardPesoFemeas();
             } else if (mod === 'realMeta') {
                 updateDashboardRealMeta();
+            } else if (mod === 'fertilidade') {
+                updateDashboardFertilidade();
             }
         }
 
@@ -2452,10 +2490,14 @@
             const tbody = document.getElementById('tableBodyFertilidade');
             tbody.innerHTML = '';
             
+            dbFertilidade = []; // Popula array para o Dashboard
+
             lastSnapFert.forEach(child => {
                 const d = child.val();
                 if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
+                dbFertilidade.push(d); // Adicionado ao array local
+
                 let padrao = padraoFertCache[String(d.ft_idade)] || {};
                 let std = parseField(padrao.pfert_std);
                 let displayStd = !isNaN(std) ? formatNum(std) + '%' : '-';
@@ -2520,6 +2562,11 @@
                 tbody.innerHTML += tr;
             });
             restoreEditState('tableBodyFertilidade');
+
+            // Atualiza Dashboard caso esteja visível
+            if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'fertilidade') {
+                updateDashboardFertilidade();
+            }
         }
 
         database.ref('fertilidade').orderByChild('ordem').on('value', (snapshot) => {
@@ -2735,6 +2782,139 @@
                     { label: 'Ideal', data: dataMxfIdeal, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
                     { label: 'Máximo', data: dataMxfMaximo, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
                     { label: 'Real', data: dataMxfReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+        }
+
+        // Dashboard Fertilidade Lógica de Construção
+        function updateDashboardFertilidade() {
+            if(dbFertilidade.length === 0) {
+                document.getElementById('dashboardEmptyState').style.display = 'flex';
+                document.getElementById('dashFertilidade').style.display = 'none';
+                return;
+            }
+            document.getElementById('dashboardEmptyState').style.display = 'none';
+            document.getElementById('dashFertilidade').style.display = 'grid';
+
+            const ag = {};
+            // Agrupando por Idade (conforme solicitado)
+            dbFertilidade.forEach(d => {
+                let idade = parseInt(d.ft_idade);
+                if(isNaN(idade)) return;
+                
+                if(!ag[idade]) {
+                    ag[idade] = {
+                        stds: [], reais: [], iefs: [], lacunas: [], desvios: [],
+                        lotes: { l1: [], l2: [], l3: [], l4: [], l5: [], l6: [], l7: [], l8: [] }
+                    };
+                }
+
+                let padrao = padraoFertCache[String(idade)] || {};
+                let std = parseField(padrao.pfert_std);
+
+                let lotesValidos = [];
+                const addLote = (val, arr) => {
+                    let v = parseField(val);
+                    if(!isNaN(v)) { lotesValidos.push(v); arr.push(v); }
+                };
+
+                addLote(d.ft_lote_0224et, ag[idade].lotes.l1);
+                addLote(d.ft_lote_0324nl, ag[idade].lotes.l2);
+                addLote(d.ft_lote_0324ac, ag[idade].lotes.l3);
+                addLote(d.ft_lote_0324bb, ag[idade].lotes.l4);
+                addLote(d.ft_lote_0524lb, ag[idade].lotes.l5);
+                addLote(d.ft_lote_0624er, ag[idade].lotes.l6);
+                addLote(d.ft_lote_0624bc, ag[idade].lotes.l7);
+                addLote(d.ft_lote_0724sr, ag[idade].lotes.l8);
+
+                let realVal = lotesValidos.length > 0 ? lotesValidos.reduce((a, b) => a + b, 0) / lotesValidos.length : 0;
+                
+                if(!isNaN(std)) {
+                    ag[idade].stds.push(std);
+                    if(lotesValidos.length > 0) {
+                        ag[idade].reais.push(realVal);
+                        ag[idade].iefs.push(std > 0 ? (realVal / std) * 100 : 0);
+                        let lacuna = realVal - std;
+                        ag[idade].lacunas.push(lacuna);
+                        ag[idade].desvios.push(realVal > 0 ? (lacuna / realVal) * 100 : 0);
+                    }
+                }
+            });
+
+            const idades = Object.keys(ag).map(Number).sort((a,b)=>a-b);
+            const labels = idades.map(i => i + ' Sem'); // Rótulo da Idade
+
+            const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : 0;
+
+            const dataStd = idades.map(i => avgArr(ag[i].stds));
+            const dataReal = idades.map(i => avgArr(ag[i].reais));
+            
+            const dataLacuna = idades.map(i => avgArr(ag[i].lacunas));
+            const dataDesvio = idades.map(i => avgArr(ag[i].desvios));
+
+            const dataIef = idades.map(i => avgArr(ag[i].iefs));
+
+            const dl1 = idades.map(i => avgArr(ag[i].lotes.l1));
+            const dl2 = idades.map(i => avgArr(ag[i].lotes.l2));
+            const dl3 = idades.map(i => avgArr(ag[i].lotes.l3));
+            const dl4 = idades.map(i => avgArr(ag[i].lotes.l4));
+            const dl5 = idades.map(i => avgArr(ag[i].lotes.l5));
+            const dl6 = idades.map(i => avgArr(ag[i].lotes.l6));
+            const dl7 = idades.map(i => avgArr(ag[i].lotes.l7));
+            const dl8 = idades.map(i => avgArr(ag[i].lotes.l8));
+
+            const commonOptions = { 
+                responsive: true, maintainAspectRatio: false, color: '#ccc', 
+                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
+                plugins: { legend: { labels: { color: '#ccc' } } } 
+            };
+
+            // Gráfico 1: STD x Real
+            if(chartFert1) chartFert1.destroy();
+            chartFert1 = new Chart(document.getElementById('chartFert1'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: 'STD', data: dataStd, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Real', data: dataReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 2: Lacuna x Desvio
+            if(chartFert2) chartFert2.destroy();
+            chartFert2 = new Chart(document.getElementById('chartFert2'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: '% Lacuna', data: dataLacuna, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 },
+                    { label: '% Desvio', data: dataDesvio, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 3: Evolução dos Lotes
+            if(chartFert3) chartFert3.destroy();
+            chartFert3 = new Chart(document.getElementById('chartFert3'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: '0224ET', data: dl1, borderColor: '#ff6384', fill: false, tension: 0.3 },
+                    { label: '0324NL', data: dl2, borderColor: '#36a2eb', fill: false, tension: 0.3 },
+                    { label: '0324AC', data: dl3, borderColor: '#cc65fe', fill: false, tension: 0.3 },
+                    { label: '0324BB', data: dl4, borderColor: '#ffce56', fill: false, tension: 0.3 },
+                    { label: '0524LB', data: dl5, borderColor: '#4bc0c0', fill: false, tension: 0.3 },
+                    { label: '0624ER', data: dl6, borderColor: '#f77eb9', fill: false, tension: 0.3 },
+                    { label: '0624BC', data: dl7, borderColor: '#ff9f40', fill: false, tension: 0.3 },
+                    { label: '0724SR', data: dl8, borderColor: '#9966ff', fill: false, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 4: % IEF (Índice de Eficiência)
+            if(chartFert4) chartFert4.destroy();
+            chartFert4 = new Chart(document.getElementById('chartFert4'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: '% IEF', data: dataIef, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }
                 ] }, 
                 options: commonOptions 
             });
