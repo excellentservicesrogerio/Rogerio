@@ -470,7 +470,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE GESTÃO DE ACESSOS ATUALIZADA -->
+    <!-- MODAL GESTÃO DE ACESSOS ATUALIZADA (SEM NOVA SENHA) -->
     <div id="accessModal" class="modal-overlay">
         <div class="profile-modal-wrapper large">
             <div class="profile-modal-content">
@@ -485,7 +485,6 @@
                                 <th>Usuário</th>
                                 <th>Tipo</th>
                                 <th>Status</th>
-                                <th id="thNovaSenha" style="display:none;">Nova Senha</th>
                                 <th class="action-col" style="display:table-cell">Ações</th>
                             </tr>
                         </thead>
@@ -1485,19 +1484,6 @@
             }
         }
 
-        function saveInlinePass(userKey) {
-            const input = document.getElementById('inlinePass_' + userKey);
-            if(input && input.value.trim() !== '') {
-                database.ref('users/' + userKey).update({ senha: input.value.trim() }).then(() => {
-                    showCustomAlert("Senha atualizada com sucesso!", "Sucesso");
-                    input.value = '';
-                    loadAccessTable();
-                });
-            } else {
-                showCustomAlert("Digite uma senha válida.", "Erro");
-            }
-        }
-
         function openAccessModal() { document.getElementById('accessModal').classList.add('active'); loadAccessTable(); }
         function closeAccessModal() { document.getElementById('accessModal').classList.remove('active'); }
 
@@ -1505,13 +1491,6 @@
             const tbody = document.getElementById('accessTableBody');
             tbody.innerHTML = '';
             
-            const isDev = (loggedUser && (loggedUser.toUpperCase() === 'DESENVOLVEDOR' || loggedUserType === 'desenvolvedor'));
-            const thNovaSenha = document.getElementById('thNovaSenha');
-            
-            if (thNovaSenha) {
-                thNovaSenha.style.display = isDev ? 'table-cell' : 'none';
-            }
-
             database.ref('users').once('value').then((snapshot) => {
                 snapshot.forEach((childSnapshot) => {
                     const userKey = childSnapshot.key;
@@ -1529,18 +1508,13 @@
 
                     let safePass = (data.senha || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     let nameHtml = data.nome;
-                    if(isDev) {
+                    if(loggedUser.toUpperCase() === 'DESENVOLVEDOR' || loggedUserType === 'desenvolvedor') {
                         nameHtml = `<span style="cursor:pointer; color:var(--red-vivid); text-decoration:underline;" onclick="openPassEditModal('${userKey}', '${safePass}')" title="Clique para ver a senha atual">${data.nome}</span>`;
                     }
 
                     let actionsHtml = `<select onchange="updateUserStatus('${userKey}', this.value)" style="background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:2px;"><option value="Pendente" ${data.status === 'Pendente' ? 'selected' : ''}>Pendente</option><option value="Ativo" ${data.status === 'Ativo' ? 'selected' : ''}>Ativo</option><option value="Inativo" ${data.status === 'Inativo' ? 'selected' : ''}>Inativo</option></select>`;
 
-                    let tdSenha = "";
-                    if(isDev) {
-                        tdSenha = `<td><div style="display:flex; gap:5px;"><input type="text" id="inlinePass_${userKey}" class="form-input" placeholder="Nova Senha" style="width: 90px; padding: 4px; font-size: 11px;"><button class="btn-save" style="margin:0; padding:4px 8px;" onclick="saveInlinePass('${userKey}')">Salvar</button></div></td>`;
-                    }
-
-                    tbody.innerHTML += `<tr><td>${nameHtml}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td>${tdSenha}<td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
+                    tbody.innerHTML += `<tr><td>${nameHtml}</td><td style="color:var(--red-vivid);">${userKey}</td><td>${typeHtml}</td><td><span class="status-badge ${statusClass}">${data.status}</span></td><td class="action-col" style="display:table-cell">${actionsHtml}</td></tr>`;
                 });
             });
         }
@@ -1635,12 +1609,14 @@
 
         function applyCrop() {
             if(!cropper) return;
+            
+            // REDUZIMOS UM POUCO O TAMANHO DA CAPA PARA PREVENIR TRAVAMENTOS (CASO USE RTDB BASE64 DE FALLBACK)
             const canvas = cropper.getCroppedCanvas({
-                width: currentCropType === 'avatar' ? 250 : 800,
-                height: currentCropType === 'avatar' ? 250 : 450
+                width: currentCropType === 'avatar' ? 250 : 640,
+                height: currentCropType === 'avatar' ? 250 : 360
             });
             
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
             
             if(currentCropType === 'avatar') {
                 pendingAvatarDataUrl = dataUrl;
@@ -1650,6 +1626,14 @@
                 document.getElementById('coverPreview').src = dataUrl;
             }
             closeCropper();
+        }
+
+        // FUNÇÃO DE TIMEOUT PARA O UPLOAD DO FIREBASE STORAGE (Evita loop infinito/travamento)
+        function uploadBase64WithTimeout(ref, dataUrl) {
+            return Promise.race([
+                ref.putString(dataUrl, 'data_url'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout Storage')), 5000))
+            ]);
         }
 
         async function saveProfile() { 
@@ -1670,24 +1654,27 @@
                     if (pendingAvatarDataUrl) {
                         try {
                             const avatarRef = storage.ref(`users/${loggedUser}/avatar.jpg`);
-                            await avatarRef.putString(pendingAvatarDataUrl, 'data_url');
+                            await uploadBase64WithTimeout(avatarRef, pendingAvatarDataUrl);
                             let dlUrl = await avatarRef.getDownloadURL();
                             updates.avatarUrl = dlUrl.includes('?') ? dlUrl + '&cb=' + Date.now() : dlUrl + '?cb=' + Date.now();
                             document.getElementById('sidebarProfilePic').src = updates.avatarUrl;
                             document.getElementById('avatarPreview').src = updates.avatarUrl;
                         } catch(err) {
+                            console.warn("Storage falhou ou demorou. Usando Base64 no BD:", err);
                             updates.avatarUrl = pendingAvatarDataUrl; 
                             document.getElementById('sidebarProfilePic').src = pendingAvatarDataUrl;
                         }
                     }
+                    
                     if (pendingCoverDataUrl) {
                         try {
                             const coverRef = storage.ref(`users/${loggedUser}/cover.jpg`);
-                            await coverRef.putString(pendingCoverDataUrl, 'data_url');
+                            await uploadBase64WithTimeout(coverRef, pendingCoverDataUrl);
                             let dlUrl = await coverRef.getDownloadURL();
                             updates.coverUrl = dlUrl.includes('?') ? dlUrl + '&cb=' + Date.now() : dlUrl + '?cb=' + Date.now();
                             document.getElementById('coverPreview').src = updates.coverUrl;
                         } catch(err) {
+                            console.warn("Storage falhou ou demorou. Usando Base64 no BD:", err);
                             updates.coverUrl = pendingCoverDataUrl; 
                             document.getElementById('coverPreview').src = pendingCoverDataUrl;
                         }
