@@ -1264,9 +1264,12 @@
         let dbFertilidade = [];
         let padraoDataCache = {};
         let padraoFertCache = {};
+        
         let lastSnapPF = null;
         let lastSnapPM = null;
         let lastSnapFert = null;
+        let lastSnapMatriz = null;
+        let lastSnapRM = null;
 
         function applyCacheBuster(url) {
             if(!url) return url;
@@ -1476,6 +1479,13 @@
             const loginScreen = document.getElementById('login-screen');
             const welcomeScreen = document.getElementById('welcome-screen');
             
+            // Força a re-renderização das tabelas para aplicar o filtro de usuário correto:
+            if(lastSnapMatriz) renderMatriz();
+            if(lastSnapPF) renderPesoFemeas();
+            if(lastSnapPM) renderPesoMachos();
+            if(lastSnapRM) renderRealMeta();
+            if(lastSnapFert) renderFertilidade();
+
             if (!isRestoreSession) {
                 const welcomeAvatar = document.getElementById('welcomeAvatar');
                 if(avatarUrl) {
@@ -2323,7 +2333,8 @@
             });
         });
 
-        database.ref('matriz').orderByChild('ordem').on('value', (snapshot) => {
+        function renderMatriz() {
+            if(!lastSnapMatriz) return;
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
@@ -2333,10 +2344,10 @@
             let prevQtdSaldoF = 0;
             let prevQtdSaldoM = 0;
 
-            snapshot.forEach(child => {
+            lastSnapMatriz.forEach(child => {
                 const d = child.val();
                 
-                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
                 dbMatriz.push(d); // Adicionado ao Array
 
@@ -2444,6 +2455,11 @@
             if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'matriz') {
                 updateDashboardMatriz();
             }
+        }
+
+        database.ref('matriz').orderByChild('ordem').on('value', (snapshot) => {
+            lastSnapMatriz = snapshot;
+            renderMatriz();
         });
 
         // PESO FÊMEAS
@@ -2468,7 +2484,7 @@
             
             lastSnapPF.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
                 dbPesoFemeas.push(d); // Adicionado ao array local
                 
@@ -2545,7 +2561,7 @@
 
             lastSnapPM.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
 
                 dbPesoMachos.push(d); // Adicionado ao array local
 
@@ -2639,7 +2655,6 @@
                     };
                 }
 
-                // Agrupando GADs da semana
                 for(let i=1; i<=8; i++) {
                     let g = Number(d['pm_g'+i]); 
                     if(g > 0) ag[wk].gads.push(g);
@@ -2685,57 +2700,47 @@
                 plugins: { legend: { labels: { color: '#ccc' } } } 
             };
 
-            // Gráfico 1: GAD Padrão x GAD Real
             if(chartPM1) chartPM1.destroy();
             chartPM1 = new Chart(document.getElementById('chartGad'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: 'GAD Padrão', data: dataGadP, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
                     { label: 'GAD Real', data: dataGadR, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 2: Peso Médio x Peso Padrão
             if(chartPM2) chartPM2.destroy();
             chartPM2 = new Chart(document.getElementById('chartPeso'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: 'Peso Padrão', data: dataPesoP, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
                     { label: 'Peso Médio', data: dataPesoM, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 3: % Acima do Peso (Geral)
             if(chartPM3) chartPM3.destroy();
             chartPM3 = new Chart(document.getElementById('chartAcimaPeso'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: '% Acima do Peso (Geral)', data: dataAcima, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 4: Uniformidade (UNI)
             if(chartPM4) chartPM4.destroy();
             chartPM4 = new Chart(document.getElementById('chartUni'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: 'Uniformidade', data: dataUni, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
             
-            // Gráfico 5: Comparativo GAD (Leve x Pesado)
             if(chartPM5) chartPM5.destroy();
             chartPM5 = new Chart(document.getElementById('chartPM5'), { 
                 type: 'bar', 
                 data: { labels, datasets: [
                     { label: 'GAD Leve Média', data: dataGadLeve, backgroundColor: 'rgba(59, 130, 246, 0.7)' },
                     { label: 'GAD Pesado Média', data: dataGadPesado, backgroundColor: 'rgba(230, 25, 59, 0.7)' }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
         }
 
@@ -2753,15 +2758,16 @@
             });
         });
 
-        database.ref('real_meta').orderByChild('ordem').on('value', (snapshot) => {
+        function renderRealMeta() {
+            if(!lastSnapRM) return;
             const tbody = document.getElementById('tableBodyRealMeta');
             tbody.innerHTML = '';
             
             dbRealMeta = []; // Popula array para o Dashboard
 
-            snapshot.forEach(child => {
+            lastSnapRM.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
                 dbRealMeta.push(d); // Adicionado ao array local
 
@@ -2776,13 +2782,16 @@
             });
             restoreEditState('tableBodyRealMeta');
 
-            // Atualiza Dashboard caso esteja visível
             if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'realMeta') {
                 updateDashboardRealMeta();
             }
+        }
+
+        database.ref('real_meta').orderByChild('ordem').on('value', (snapshot) => {
+            lastSnapRM = snapshot;
+            renderRealMeta();
         });
 
-        // Dashboard Real x Meta Lógica de Construção
         function updateDashboardRealMeta() {
             populateFilters(dbRealMeta, {tecnico: true, ano: false, mes: false, semana: true, aviario: true, idade: false, fxmatriz: false});
             
@@ -2839,29 +2848,24 @@
                 plugins: { legend: { labels: { color: '#ccc' } } } 
             };
 
-            // Gráfico 1: Peso Ovo (Meta: Bar, Real: Line)
             if(chartRM1) chartRM1.destroy();
             chartRM1 = new Chart(document.getElementById('chartRM1'), { 
                 type: 'bar', 
                 data: { labels, datasets: [
                     { type: 'bar', label: 'Meta', data: dataPesoMeta, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: '#3b82f6', borderWidth: 1 },
                     { type: 'line', label: 'Real', data: dataPesoReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 2: Aproveitamento (Meta: Bar, Real: Line)
             if(chartRM2) chartRM2.destroy();
             chartRM2 = new Chart(document.getElementById('chartRM2'), { 
                 type: 'bar', 
                 data: { labels, datasets: [
                     { type: 'bar', label: 'Meta', data: dataAprovMeta, backgroundColor: 'rgba(255, 140, 0, 0.7)', borderColor: '#ff8c00', borderWidth: 1 },
                     { type: 'line', label: 'Real', data: dataAprovReal, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 3: Macho x Fêmea (Ideal x Máximo x Real - Todas Linhas)
             if(chartRM3) chartRM3.destroy();
             chartRM3 = new Chart(document.getElementById('chartRM3'), { 
                 type: 'line', 
@@ -2869,8 +2873,7 @@
                     { label: 'Ideal', data: dataMxfIdeal, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
                     { label: 'Máximo', data: dataMxfMaximo, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
                     { label: 'Real', data: dataMxfReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
         }
 
@@ -2893,13 +2896,13 @@
             const tbody = document.getElementById('tableBodyFertilidade');
             tbody.innerHTML = '';
             
-            dbFertilidade = []; // Popula array para o Dashboard
+            dbFertilidade = []; 
 
             lastSnapFert.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
                 
-                dbFertilidade.push(d); // Adicionado ao array local
+                dbFertilidade.push(d); 
 
                 let padrao = padraoFertCache[String(d.ft_idade)] || {};
                 let std = parseField(padrao.pfert_std);
@@ -2966,7 +2969,6 @@
             });
             restoreEditState('tableBodyFertilidade');
 
-            // Atualiza Dashboard caso esteja visível
             if(document.getElementById('view-table-dashboard').style.display !== 'none' && document.getElementById('dashModule').value === 'fertilidade') {
                 updateDashboardFertilidade();
             }
@@ -2977,7 +2979,6 @@
             renderFertilidade();
         });
 
-        // Dashboard Fertilidade Lógica de Construção
         function updateDashboardFertilidade() {
             populateFilters(dbFertilidade, {tecnico: true, ano: false, mes: false, semana: false, aviario: false, idade: true, fxmatriz: true});
             
@@ -2992,7 +2993,6 @@
             document.getElementById('dashFertilidade').style.display = 'grid';
 
             const ag = {};
-            // Agrupando por Idade (conforme solicitado)
             filteredDb.forEach(d => {
                 let idade = parseInt(d.ft_idade);
                 if(isNaN(idade)) return;
@@ -3037,7 +3037,6 @@
             });
 
             const idades = Object.keys(ag).map(Number).sort((a,b)=>a-b);
-            // Label atualizado para mostrar por Idade ao invés de Sem
             const labels = idades.map(i => 'Idade ' + i);
 
             const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : 0;
@@ -3065,29 +3064,24 @@
                 plugins: { legend: { labels: { color: '#ccc' } } } 
             };
 
-            // Gráfico 1: STD x Real
             if(chartFert1) chartFert1.destroy();
             chartFert1 = new Chart(document.getElementById('chartFert1'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: 'STD', data: dataStd, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
                     { label: 'Real', data: dataReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 2: Lacuna x Desvio
             if(chartFert2) chartFert2.destroy();
             chartFert2 = new Chart(document.getElementById('chartFert2'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: '% Lacuna', data: dataLacuna, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 },
                     { label: '% Desvio', data: dataDesvio, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 3: Evolução dos Lotes (Melhorado com STD e Cores fill)
             if(chartFert3) chartFert3.destroy();
             chartFert3 = new Chart(document.getElementById('chartFert3'), { 
                 type: 'line', 
@@ -3101,20 +3095,39 @@
                     { label: '0624ER', data: dl6, borderColor: '#f77eb9', backgroundColor: 'rgba(247, 126, 185, 0.1)', fill: true, tension: 0.3 },
                     { label: '0624BC', data: dl7, borderColor: '#ff9f40', backgroundColor: 'rgba(255, 159, 64, 0.1)', fill: true, tension: 0.3 },
                     { label: '0724SR', data: dl8, borderColor: '#9966ff', backgroundColor: 'rgba(153, 102, 255, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
 
-            // Gráfico 4: % IEF (Índice de Eficiência)
             if(chartFert4) chartFert4.destroy();
             chartFert4 = new Chart(document.getElementById('chartFert4'), { 
                 type: 'line', 
                 data: { labels, datasets: [
                     { label: '% IEF', data: dataIef, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
+                ] }, options: commonOptions 
             });
         }
+
+        // --- MODO DE EDIÇÃO (LÓGICA DOS BOTÕES DE ENGRENAGEM) ---
+        const toggleEditMode = (btnId, tableId, bodyId) => {
+            const btn = document.getElementById(btnId);
+            if(btn) {
+                btn.addEventListener('click', function() {
+                    const tableContainer = document.getElementById(tableId).parentNode;
+                    tableContainer.classList.toggle('edit-mode');
+                    this.classList.toggle('active');
+                    restoreEditState(bodyId);
+                });
+            }
+        };
+
+        toggleEditMode('editToggleBtn', 'mainTable', 'tableBody');
+        toggleEditMode('editToggleBtnPF', 'pesoFemeasTable', 'tableBodyPesoFemeas');
+        toggleEditMode('editToggleBtnPM', 'pesoMachosTable', 'tableBodyPesoMachos');
+        toggleEditMode('editToggleBtnRM', 'realMetaTable', 'tableBodyRealMeta');
+        toggleEditMode('editToggleBtnFT', 'fertilidadeTable', 'tableBodyFertilidade');
+        toggleEditMode('editToggleBtnPD', 'padraoTable', 'tableBodyPadrao');
+        toggleEditMode('editToggleBtnPFERT', 'padraoFertTable', 'tableBodyPadraoFert');
+
     </script>
 </body>
 </html>
