@@ -470,7 +470,6 @@
         </div>
     </div>
 
-    <!-- MODAL GESTÃO DE ACESSOS ATUALIZADA (SEM NOVA SENHA) -->
     <div id="accessModal" class="modal-overlay">
         <div class="profile-modal-wrapper large">
             <div class="profile-modal-content">
@@ -542,21 +541,52 @@
                         </select>
                     </div>
                     
-                    <div id="filtrosPesoMachos" style="display:none; grid-column: span 2;" class="form-grid">
-                        <div class="divider-title" style="margin-top: 5px;">Filtros: Peso Machos</div>
-                        <div class="form-group full-width">
-                            <label>Granja</label>
-                            <select id="dashFilterGranja" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todas Granjas</option></select>
+                    <div id="dashboardFilters" style="grid-column: span 2;" class="form-grid">
+                        <div class="divider-title" style="margin-top: 5px;">Refinar Análise</div>
+                        
+                        <div class="form-group full-width" id="fg-tecnico" style="display:none;">
+                            <label>Técnico</label>
+                            <select id="dashFilterTecnico" class="form-select"><option value="">Todos</option></select>
                         </div>
-                        <div class="form-group full-width">
-                            <label>Lote</label>
-                            <select id="dashFilterLote" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Lotes</option></select>
+        
+                        <div class="form-group" id="fg-ano">
+                            <label>Ano</label>
+                            <select id="dashFilterAno" class="form-select"><option value="">Todos</option></select>
                         </div>
-                        <div class="form-group full-width">
+                        <div class="form-group" id="fg-mes">
+                            <label>Mês</label>
+                            <select id="dashFilterMes" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="01">01 - Jan</option><option value="02">02 - Fev</option>
+                                <option value="03">03 - Mar</option><option value="04">04 - Abr</option>
+                                <option value="05">05 - Mai</option><option value="06">06 - Jun</option>
+                                <option value="07">07 - Jul</option><option value="08">08 - Ago</option>
+                                <option value="09">09 - Set</option><option value="10">10 - Out</option>
+                                <option value="11">11 - Nov</option><option value="12">12 - Dez</option>
+                            </select>
+                        </div>
+        
+                        <div class="form-group" id="fg-semana">
+                            <label>Semana</label>
+                            <select id="dashFilterSemana" class="form-select"><option value="">Todas</option></select>
+                        </div>
+                        
+                        <div class="form-group" id="fg-aviario">
                             <label>Aviário</label>
-                            <select id="dashFilterAviario" class="form-select" onchange="updateDashboardPesoMachos()"><option value="">Todos Aviários</option></select>
+                            <select id="dashFilterAviario" class="form-select"><option value="">Todos</option></select>
                         </div>
-                        <button class="btn-submit full-width" onclick="updateDashboardPesoMachos(); toggleMobileSidebar();" style="margin-top:10px;">Atualizar Gráficos PM</button>
+        
+                        <div class="form-group" id="fg-idade" style="display:none;">
+                            <label>Idade</label>
+                            <select id="dashFilterIdade" class="form-select"><option value="">Todas</option></select>
+                        </div>
+                        
+                        <div class="form-group" id="fg-fxmatriz" style="display:none;">
+                            <label>FX Matriz</label>
+                            <select id="dashFilterFxMatriz" class="form-select"><option value="">Todas</option></select>
+                        </div>
+        
+                        <button class="btn-submit full-width" onclick="applyDashboardFilters(); toggleMobileSidebar();" style="margin-top:10px;">Aplicar Filtros</button>
                     </div>
                 </div>
             </div>
@@ -783,7 +813,7 @@
             
             <div id="dashboardEmptyState" style="display: none; flex: 1; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; text-align: center; flex-direction: column; gap: 15px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--red-vivid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-                <p>O dashboard estratégico só funciona mediante a informações registradas.<br>Cadastre dados na respectiva aba para gerar os gráficos automaticamente.</p>
+                <p>O dashboard estratégico só funciona mediante a informações registradas (ou visíveis para o seu usuário).<br>Cadastre dados na respectiva aba ou ajuste os filtros.</p>
             </div>
 
             <div id="dashMatriz" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
@@ -811,6 +841,12 @@
                         <canvas id="chartMatriz3"></canvas>
                     </div>
                 </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Mortalidade (Fêmeas vs Machos)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartMatriz5"></canvas>
+                    </div>
+                </div>
             </div>
 
             <div id="dashPesoMachos" style="display: none; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 30px; width: 100%;">
@@ -836,6 +872,12 @@
                     <h3>Uniformidade (UNI)</h3>
                     <div style="position: relative; height: 280px; width: 100%;">
                         <canvas id="chartUni"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Comparativo de GAD (Média Leve vs Pesado)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPM5"></canvas>
                     </div>
                 </div>
             </div>
@@ -881,6 +923,12 @@
                     <h3>% Acima do Peso</h3>
                     <div style="position: relative; height: 280px; width: 100%;">
                         <canvas id="chartPF7"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width" style="grid-column: span 2;">
+                    <h3>Uniformidade por Aviário (Média)</h3>
+                    <div style="position: relative; height: 280px; width: 100%;">
+                        <canvas id="chartPF8"></canvas>
                     </div>
                 </div>
             </div>
@@ -1363,13 +1411,15 @@
             }));
             resetInactivityTimer();
 
-            // Controle das abas Padrão e Padrão Fert
+            // Controle das abas (Usuários Comuns perdem acesso à Padrões e RealxMeta)
             if(loggedUserType === 'comum') {
                 document.getElementById('tab-padrao').style.display = 'none';
                 document.getElementById('tab-padrao-fert').style.display = 'none';
+                document.getElementById('tab-real-meta').style.display = 'none';
             } else {
                 document.getElementById('tab-padrao').style.display = 'block';
                 document.getElementById('tab-padrao-fert').style.display = 'block';
+                document.getElementById('tab-real-meta').style.display = 'block';
             }
 
             document.getElementById('profName').value = loggedUserName;
@@ -1717,11 +1767,67 @@
         }
 
         // --- SISTEMA DE GESTÃO DO DASHBOARD ---
-        let chartM1, chartM2, chartM3, chartM4;
-        let chartPF1, chartPF2, chartPF3, chartPF4, chartPF5, chartPF6, chartPF7;
-        let chartPM1, chartPM2, chartPM3, chartPM4;
+        let chartM1, chartM2, chartM3, chartM4, chartM5;
+        let chartPF1, chartPF2, chartPF3, chartPF4, chartPF5, chartPF6, chartPF7, chartPF8;
+        let chartPM1, chartPM2, chartPM3, chartPM4, chartPM5;
         let chartRM1, chartRM2, chartRM3;
         let chartFert1, chartFert2, chartFert3, chartFert4;
+
+        function applyDashboardFilters() {
+            const mod = document.getElementById('dashModule').value;
+            if(mod === 'matriz') updateDashboardMatriz();
+            else if (mod === 'pesoMachos') updateDashboardPesoMachos(); 
+            else if (mod === 'pesoFemeas') updateDashboardPesoFemeas();
+            else if (mod === 'realMeta') updateDashboardRealMeta();
+            else if (mod === 'fertilidade') updateDashboardFertilidade();
+        }
+
+        function populateFilters(moduleData, config) {
+            document.getElementById('fg-tecnico').style.display = (config.tecnico && (loggedUserType === 'admin' || loggedUserType === 'desenvolvedor')) ? 'block' : 'none';
+            document.getElementById('fg-ano').style.display = config.ano ? 'block' : 'none';
+            document.getElementById('fg-mes').style.display = config.mes ? 'block' : 'none';
+            document.getElementById('fg-semana').style.display = config.semana ? 'block' : 'none';
+            document.getElementById('fg-aviario').style.display = config.aviario ? 'block' : 'none';
+            document.getElementById('fg-idade').style.display = config.idade ? 'block' : 'none';
+            document.getElementById('fg-fxmatriz').style.display = config.fxmatriz ? 'block' : 'none';
+
+            let tecnicos=new Set(), anos=new Set(), semanas=new Set(), aviarios=new Set(), idades=new Set(), fxmatrizes=new Set();
+            
+            moduleData.forEach(d => {
+                if(d.tecnico) tecnicos.add(d.tecnico);
+                
+                let dateStr = d.c_data || d.pf_data || d.pm_data || "";
+                if(dateStr) anos.add(dateStr.substring(0,4));
+                
+                let sem = d.c_semana || d.pf_semana || d.pm_semana || d.rm_semana;
+                if(sem) semanas.add(String(sem));
+                
+                let avi = d.c_aviario || d.pf_aviario || d.pm_aviario || d.rm_aviario;
+                if(avi) aviarios.add(String(avi));
+
+                if(d.ft_idade) idades.add(String(d.ft_idade));
+                if(d.ft_fx_matriz) fxmatrizes.add(String(d.ft_fx_matriz));
+            });
+
+            const fillSelect = (id, set) => {
+                const el = document.getElementById(id);
+                const currentVal = el.value;
+                el.innerHTML = '<option value="">Todos(as)</option>';
+                [...set].sort().forEach(v => {
+                    let opt = document.createElement('option');
+                    opt.value = v; opt.text = v;
+                    el.appendChild(opt);
+                });
+                if([...set].includes(currentVal)) el.value = currentVal;
+            };
+
+            fillSelect('dashFilterTecnico', tecnicos);
+            fillSelect('dashFilterAno', anos);
+            fillSelect('dashFilterSemana', semanas);
+            fillSelect('dashFilterAviario', aviarios);
+            fillSelect('dashFilterIdade', idades);
+            fillSelect('dashFilterFxMatriz', fxmatrizes);
+        }
 
         function switchDashboardModule() {
             const mod = document.getElementById('dashModule').value;
@@ -1741,7 +1847,6 @@
             document.getElementById('dashPesoFemeas').style.display = 'none';
             document.getElementById('dashRealMeta').style.display = 'none';
             document.getElementById('dashFertilidade').style.display = 'none';
-            document.getElementById('filtrosPesoMachos').style.display = 'none';
 
             if(mod === 'matriz') {
                 updateDashboardMatriz();
@@ -1756,8 +1861,40 @@
             }
         }
 
+        function filterDataGeneric(dataArray) {
+            let fTecnico = document.getElementById('dashFilterTecnico').value;
+            let fAno = document.getElementById('dashFilterAno').value;
+            let fMes = document.getElementById('dashFilterMes').value;
+            let fSemana = document.getElementById('dashFilterSemana').value;
+            let fAviario = document.getElementById('dashFilterAviario').value;
+            let fIdade = document.getElementById('dashFilterIdade').value;
+            let fFxMatriz = document.getElementById('dashFilterFxMatriz').value;
+
+            return dataArray.filter(d => {
+                let dateStr = d.c_data || d.pf_data || d.pm_data || "";
+                let ano = dateStr ? dateStr.substring(0,4) : "";
+                let mes = dateStr ? dateStr.substring(5,7) : "";
+                let sem = d.c_semana || d.pf_semana || d.pm_semana || d.rm_semana;
+                let avi = d.c_aviario || d.pf_aviario || d.pm_aviario || d.rm_aviario;
+
+                if (fTecnico && d.tecnico !== fTecnico) return false;
+                if (fAno && ano !== fAno) return false;
+                if (fMes && mes !== fMes) return false;
+                if (fSemana && String(sem) !== fSemana) return false;
+                if (fAviario && String(avi) !== fAviario) return false;
+                if (fIdade && String(d.ft_idade) !== fIdade) return false;
+                if (fFxMatriz && String(d.ft_fx_matriz) !== fFxMatriz) return false;
+                
+                return true;
+            });
+        }
+
         function updateDashboardMatriz() {
-            if(dbMatriz.length === 0) {
+            populateFilters(dbMatriz, {tecnico: true, ano: true, mes: true, semana: true, aviario: true, idade: false, fxmatriz: false});
+            
+            let filteredDb = filterDataGeneric(dbMatriz);
+
+            if(filteredDb.length === 0) {
                 document.getElementById('dashboardEmptyState').style.display = 'flex';
                 document.getElementById('dashMatriz').style.display = 'none';
                 return;
@@ -1766,10 +1903,10 @@
             document.getElementById('dashMatriz').style.display = 'grid';
 
             const ag = {};
-            dbMatriz.forEach(d => {
+            filteredDb.forEach(d => {
                 let wk = parseInt(d.c_semana);
                 if(isNaN(wk)) return;
-                if(!ag[wk]) ag[wk] = { prod:0, peq:0, dgemas:0, sdesc:0, sninho:0, scama:0, ocom:0, olimpos:0, queb:0, trinc:0, def:0, inc:0 };
+                if(!ag[wk]) ag[wk] = { prod:0, peq:0, dgemas:0, sdesc:0, sninho:0, scama:0, ocom:0, olimpos:0, queb:0, trinc:0, def:0, inc:0, f_mort_sum:0, m_mort_sum:0 };
                 
                 ag[wk].prod += Number(d.c_producao) || 0;
                 ag[wk].peq += Number(d.c_pequenos) || 0;
@@ -1783,6 +1920,11 @@
                 ag[wk].trinc += Number(d.c_trincados) || 0;
                 ag[wk].def += Number(d.c_deformados) || 0;
                 ag[wk].inc += Number(d.c_ovosincubatorio) || 0;
+
+                for(let i=1; i<=8; i++) {
+                    ag[wk].f_mort_sum += Number(d['f_q'+i]) || 0;
+                    ag[wk].m_mort_sum += Number(d['m_q'+i]) || 0;
+                }
             });
 
             const weeks = Object.keys(ag).map(Number).sort((a,b)=>a-b);
@@ -1805,6 +1947,9 @@
             const dataDef = weeks.map(w => pct(ag[w].def, ag[w].prod));
 
             const dataPctInc = weeks.map(w => pct(ag[w].inc, ag[w].prod));
+            
+            const dataFMort = weeks.map(w => ag[w].f_mort_sum);
+            const dataMMort = weeks.map(w => ag[w].m_mort_sum);
 
             const commonOptions = { 
                 responsive: true, maintainAspectRatio: false, color: '#ccc', 
@@ -1839,10 +1984,21 @@
             // Gráfico 4: % Ovos Para Incubatório
             if(chartM4) chartM4.destroy();
             chartM4 = new Chart(document.getElementById('chartMatriz4'), { type: 'line', data: { labels, datasets: [{ label: '% Ovos P/ Incubatório', data: dataPctInc, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+
+            // Gráfico 5: Mortalidade
+            if(chartM5) chartM5.destroy();
+            chartM5 = new Chart(document.getElementById('chartMatriz5'), { type: 'line', data: { labels, datasets: [
+                { label: 'Mort. Fêmeas', data: dataFMort, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 },
+                { label: 'Mort. Machos', data: dataMMort, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }
+            ] }, options: commonOptions });
         }
 
         function updateDashboardPesoFemeas() {
-            if(dbPesoFemeas.length === 0) {
+            populateFilters(dbPesoFemeas, {tecnico: true, ano: true, mes: true, semana: true, aviario: true, idade: false, fxmatriz: false});
+            
+            let filteredDb = filterDataGeneric(dbPesoFemeas);
+
+            if(filteredDb.length === 0) {
                 document.getElementById('dashboardEmptyState').style.display = 'flex';
                 document.getElementById('dashPesoFemeas').style.display = 'none';
                 return;
@@ -1851,7 +2007,7 @@
             document.getElementById('dashPesoFemeas').style.display = 'grid';
 
             const ag = {};
-            dbPesoFemeas.forEach(d => {
+            filteredDb.forEach(d => {
                 let wk = parseInt(d.pf_semana);
                 if(isNaN(wk)) return;
                 if(!ag[wk]) ag[wk] = {
@@ -1942,6 +2098,10 @@
 
             if(chartPF7) chartPF7.destroy();
             chartPF7 = new Chart(document.getElementById('chartPF7'), { type: 'line', data: { labels, datasets: [{ label: '% Acima do Peso', data: dataAcima, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }] }, options: commonOptions });
+
+            // Chart Extra: Uniformidade Detalhada
+            if(chartPF8) chartPF8.destroy();
+            chartPF8 = new Chart(document.getElementById('chartPF8'), { type: 'bar', data: { labels, datasets: [{ label: 'Unif Média', data: dataUnif, backgroundColor: 'rgba(255, 140, 0, 0.7)', borderColor: '#ff8c00', borderWidth: 1 }] }, options: commonOptions });
         }
 
 
@@ -2172,7 +2332,7 @@
             snapshot.forEach(child => {
                 const d = child.val();
                 
-                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
                 
                 dbMatriz.push(d); // Adicionado ao Array
 
@@ -2304,7 +2464,7 @@
             
             lastSnapPF.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
                 
                 dbPesoFemeas.push(d); // Adicionado ao array local
                 
@@ -2381,7 +2541,7 @@
 
             lastSnapPM.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
 
                 dbPesoMachos.push(d); // Adicionado ao array local
 
@@ -2446,6 +2606,135 @@
             renderPesoMachos();
         });
 
+        // Dashboard Peso Machos Lógica de Construção
+        function updateDashboardPesoMachos() {
+            populateFilters(dbPesoMachos, {tecnico: true, ano: true, mes: true, semana: true, aviario: true, idade: false, fxmatriz: false});
+            
+            let filteredDb = filterDataGeneric(dbPesoMachos);
+
+            if(filteredDb.length === 0) {
+                document.getElementById('dashboardEmptyState').style.display = 'flex';
+                document.getElementById('dashPesoMachos').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('dashboardEmptyState').style.display = 'none';
+            document.getElementById('dashPesoMachos').style.display = 'grid';
+
+            const ag = {};
+            filteredDb.forEach(d => {
+                let wk = parseInt(d.pm_semana);
+                if(isNaN(wk)) return;
+                
+                if(!ag[wk]) {
+                    ag[wk] = {
+                        count: 0,
+                        gads: [],
+                        gadLeve: [], gadPesado: [],
+                        pesos: [], unis: []
+                    };
+                }
+
+                // Agrupando GADs da semana
+                for(let i=1; i<=8; i++) {
+                    let g = Number(d['pm_g'+i]); 
+                    if(g > 0) ag[wk].gads.push(g);
+                }
+
+                let gl1 = Number(d.pm_g1), gl2 = Number(d.pm_g2), gl3 = Number(d.pm_g5), gl4 = Number(d.pm_g6);
+                let gp1 = Number(d.pm_g3), gp2 = Number(d.pm_g4), gp3 = Number(d.pm_g7), gp4 = Number(d.pm_g8);
+                
+                if(gl1>0) ag[wk].gadLeve.push(gl1); if(gl2>0) ag[wk].gadLeve.push(gl2); if(gl3>0) ag[wk].gadLeve.push(gl3); if(gl4>0) ag[wk].gadLeve.push(gl4);
+                if(gp1>0) ag[wk].gadPesado.push(gp1); if(gp2>0) ag[wk].gadPesado.push(gp2); if(gp3>0) ag[wk].gadPesado.push(gp3); if(gp4>0) ag[wk].gadPesado.push(gp4);
+                
+                let pM = Number(d.pm_peso_medio); if(pM > 0) ag[wk].pesos.push(pM);
+                let uni = Number(d.pm_uni); if(uni > 0) ag[wk].unis.push(uni);
+                
+                ag[wk].count++;
+            });
+
+            const weeks = Object.keys(ag).map(Number).sort((a, b) => a - b);
+            const labels = weeks.map(w => String(w));
+
+            const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)) : 0;
+
+            const dataGadP = weeks.map(w => Number((padraoDataCache[String(w)] || {}).pd_gad_m) || 0);
+            const dataGadR = weeks.map(w => avgArr(ag[w].gads));
+            
+            const dataGadLeve = weeks.map(w => avgArr(ag[w].gadLeve));
+            const dataGadPesado = weeks.map(w => avgArr(ag[w].gadPesado));
+
+            const dataPesoP = weeks.map(w => Number((padraoDataCache[String(w)] || {}).pd_peso_m) || 0);
+            const dataPesoM = weeks.map(w => avgArr(ag[w].pesos));
+
+            const dataUni = weeks.map(w => avgArr(ag[w].unis));
+
+            const dataAcima = weeks.map(w => {
+                let pM = avgArr(ag[w].pesos);
+                let pP = Number((padraoDataCache[String(w)] || {}).pd_peso_m) || 0;
+                return pP > 0 ? parseFloat((((pM / pP) * 100) - 100).toFixed(2)) : 0;
+            });
+
+            const commonOptions = { 
+                responsive: true, maintainAspectRatio: false, color: '#ccc', 
+                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
+                plugins: { legend: { labels: { color: '#ccc' } } } 
+            };
+
+            // Gráfico 1: GAD Padrão x GAD Real
+            if(chartPM1) chartPM1.destroy();
+            chartPM1 = new Chart(document.getElementById('chartGad'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: 'GAD Padrão', data: dataGadP, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'GAD Real', data: dataGadR, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 2: Peso Médio x Peso Padrão
+            if(chartPM2) chartPM2.destroy();
+            chartPM2 = new Chart(document.getElementById('chartPeso'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: 'Peso Padrão', data: dataPesoP, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Peso Médio', data: dataPesoM, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 3: % Acima do Peso (Geral)
+            if(chartPM3) chartPM3.destroy();
+            chartPM3 = new Chart(document.getElementById('chartAcimaPeso'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: '% Acima do Peso (Geral)', data: dataAcima, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 4: Uniformidade (UNI)
+            if(chartPM4) chartPM4.destroy();
+            chartPM4 = new Chart(document.getElementById('chartUni'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: 'Uniformidade', data: dataUni, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+            
+            // Gráfico 5: Comparativo GAD (Leve x Pesado)
+            if(chartPM5) chartPM5.destroy();
+            chartPM5 = new Chart(document.getElementById('chartPM5'), { 
+                type: 'bar', 
+                data: { labels, datasets: [
+                    { label: 'GAD Leve Média', data: dataGadLeve, backgroundColor: 'rgba(59, 130, 246, 0.7)' },
+                    { label: 'GAD Pesado Média', data: dataGadPesado, backgroundColor: 'rgba(230, 25, 59, 0.7)' }
+                ] }, 
+                options: commonOptions 
+            });
+        }
+
         // REAL X META
         document.getElementById('cadastroRealMetaForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -2468,7 +2757,7 @@
 
             snapshot.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
                 
                 dbRealMeta.push(d); // Adicionado ao array local
 
@@ -2488,6 +2777,98 @@
                 updateDashboardRealMeta();
             }
         });
+
+        // Dashboard Real x Meta Lógica de Construção
+        function updateDashboardRealMeta() {
+            populateFilters(dbRealMeta, {tecnico: true, ano: false, mes: false, semana: true, aviario: true, idade: false, fxmatriz: false});
+            
+            let filteredDb = filterDataGeneric(dbRealMeta);
+
+            if(filteredDb.length === 0) {
+                document.getElementById('dashboardEmptyState').style.display = 'flex';
+                document.getElementById('dashRealMeta').style.display = 'none';
+                return;
+            }
+            document.getElementById('dashboardEmptyState').style.display = 'none';
+            document.getElementById('dashRealMeta').style.display = 'grid';
+
+            const ag = {};
+            filteredDb.forEach(d => {
+                let wk = parseInt(d.rm_semana);
+                if(isNaN(wk)) return;
+                
+                if(!ag[wk]) {
+                    ag[wk] = {
+                        pesoMeta: [], pesoReal: [],
+                        aprovMeta: [], aprovReal: [],
+                        mxfIdeal: [], mxfMaximo: [], mxfReal: []
+                    };
+                }
+
+                let pM = Number(d.rm_peso_meta); if(pM > 0) ag[wk].pesoMeta.push(pM);
+                let pR = Number(d.rm_peso_real); if(pR > 0) ag[wk].pesoReal.push(pR);
+                let aM = Number(d.rm_aprov_meta); if(aM > 0) ag[wk].aprovMeta.push(aM);
+                let aR = Number(d.rm_aprov_real); if(aR > 0) ag[wk].aprovReal.push(aR);
+                let iD = Number(d.rm_mxf_ideal); if(iD > 0) ag[wk].mxfIdeal.push(iD);
+                let mx = Number(d.rm_mxf_maximo); if(mx > 0) ag[wk].mxfMaximo.push(mx);
+                let rL = Number(d.rm_mxf_real); if(rL > 0) ag[wk].mxfReal.push(rL);
+            });
+
+            const weeks = Object.keys(ag).map(Number).sort((a,b)=>a-b);
+            const labels = weeks.map(w => String(w));
+
+            const avgArr = (arr) =>arr.length > 0 ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : 0;
+
+            const dataPesoMeta = weeks.map(w => avgArr(ag[w].pesoMeta));
+            const dataPesoReal = weeks.map(w => avgArr(ag[w].pesoReal));
+
+            const dataAprovMeta = weeks.map(w => avgArr(ag[w].aprovMeta));
+            const dataAprovReal = weeks.map(w => avgArr(ag[w].aprovReal));
+
+            const dataMxfIdeal = weeks.map(w => avgArr(ag[w].mxfIdeal));
+            const dataMxfMaximo = weeks.map(w => avgArr(ag[w].mxfMaximo));
+            const dataMxfReal = weeks.map(w => avgArr(ag[w].mxfReal));
+
+            const commonOptions = { 
+                responsive: true, maintainAspectRatio: false, color: '#ccc', 
+                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
+                plugins: { legend: { labels: { color: '#ccc' } } } 
+            };
+
+            // Gráfico 1: Peso Ovo (Meta: Bar, Real: Line)
+            if(chartRM1) chartRM1.destroy();
+            chartRM1 = new Chart(document.getElementById('chartRM1'), { 
+                type: 'bar', 
+                data: { labels, datasets: [
+                    { type: 'bar', label: 'Meta', data: dataPesoMeta, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: '#3b82f6', borderWidth: 1 },
+                    { type: 'line', label: 'Real', data: dataPesoReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 2: Aproveitamento (Meta: Bar, Real: Line)
+            if(chartRM2) chartRM2.destroy();
+            chartRM2 = new Chart(document.getElementById('chartRM2'), { 
+                type: 'bar', 
+                data: { labels, datasets: [
+                    { type: 'bar', label: 'Meta', data: dataAprovMeta, backgroundColor: 'rgba(255, 140, 0, 0.7)', borderColor: '#ff8c00', borderWidth: 1 },
+                    { type: 'line', label: 'Real', data: dataAprovReal, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+
+            // Gráfico 3: Macho x Fêmea (Ideal x Máximo x Real - Todas Linhas)
+            if(chartRM3) chartRM3.destroy();
+            chartRM3 = new Chart(document.getElementById('chartRM3'), { 
+                type: 'line', 
+                data: { labels, datasets: [
+                    { label: 'Ideal', data: dataMxfIdeal, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Máximo', data: dataMxfMaximo, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Real', data: dataMxfReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
+                ] }, 
+                options: commonOptions 
+            });
+        }
 
         // FERTILIDADE
         document.getElementById('cadastroFertilidadeForm').addEventListener('submit', (e) => {
@@ -2512,7 +2893,7 @@
 
             lastSnapFert.forEach(child => {
                 const d = child.val();
-                if (loggedUserType === 'comum' && d.userId !== loggedUser && d.tecnico !== loggedUserName) return;
+                if (loggedUserType === 'comum' && d.userId !== loggedUser) return;
                 
                 dbFertilidade.push(d); // Adicionado ao array local
 
@@ -2592,222 +2973,13 @@
             renderFertilidade();
         });
 
-        // Toggle Modo Edição, Exclusão e Drag & Drop
-        ['', 'PF', 'PM', 'RM', 'PD', 'FT', 'PFERT'].forEach(suf => {
-            const btn = document.getElementById(`editToggleBtn${suf}`);
-            if(btn) {
-                btn.addEventListener('click', function() {
-                    const tableContainer = this.closest('.header').nextElementSibling;
-                    const isEditMode = tableContainer.classList.toggle('edit-mode');
-                    this.classList.toggle('active');
-                    tableContainer.querySelectorAll('td[data-field]').forEach(td => {
-                        td.setAttribute('contenteditable', isEditMode);
-                    });
-                });
-            }
-        });
-
-        // Dashboard Peso Machos Lógica de Construção
-        function updateDashboardPesoMachos() {
-            if(dbPesoMachos.length === 0) {
-                document.getElementById('dashboardEmptyState').style.display = 'flex';
-                document.getElementById('dashPesoMachos').style.display = 'none';
-                return;
-            }
-            
-            document.getElementById('dashboardEmptyState').style.display = 'none';
-            document.getElementById('dashPesoMachos').style.display = 'grid';
-
-            const ag = {};
-            dbPesoMachos.forEach(d => {
-                let wk = parseInt(d.pm_semana);
-                if(isNaN(wk)) return;
-                
-                if(!ag[wk]) {
-                    ag[wk] = {
-                        count: 0,
-                        gads: [],
-                        pesos: [],
-                        unis: []
-                    };
-                }
-
-                // Agrupando GADs da semana
-                for(let i=1; i<=8; i++) {
-                    let g = Number(d['pm_g'+i]); 
-                    if(g > 0) ag[wk].gads.push(g);
-                }
-                
-                // Agrupando Pesos e Uniformidades da semana
-                let pM = Number(d.pm_peso_medio); 
-                if(pM > 0) ag[wk].pesos.push(pM);
-                
-                let uni = Number(d.pm_uni); 
-                if(uni > 0) ag[wk].unis.push(uni);
-                
-                ag[wk].count++;
-            });
-
-            const weeks = Object.keys(ag).map(Number).sort((a, b) => a - b);
-            const labels = weeks.map(w => String(w));
-
-            const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)) : 0;
-
-            // Extraindo dados para os Gráficos
-            const dataGadP = weeks.map(w => Number((padraoDataCache[String(w)] || {}).pd_gad_m) || 0);
-            const dataGadR = weeks.map(w => avgArr(ag[w].gads));
-
-            const dataPesoP = weeks.map(w => Number((padraoDataCache[String(w)] || {}).pd_peso_m) || 0);
-            const dataPesoM = weeks.map(w => avgArr(ag[w].pesos));
-
-            const dataUni = weeks.map(w => avgArr(ag[w].unis));
-
-            const dataAcima = weeks.map(w => {
-                let pM = avgArr(ag[w].pesos);
-                let pP = Number((padraoDataCache[String(w)] || {}).pd_peso_m) || 0;
-                return pP > 0 ? parseFloat((((pM / pP) * 100) - 100).toFixed(2)) : 0;
-            });
-
-            const commonOptions = { 
-                responsive: true, maintainAspectRatio: false, color: '#ccc', 
-                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
-                plugins: { legend: { labels: { color: '#ccc' } } } 
-            };
-
-            // Gráfico 1: GAD Padrão x GAD Real
-            if(chartPM1) chartPM1.destroy();
-            chartPM1 = new Chart(document.getElementById('chartGad'), { 
-                type: 'line', 
-                data: { labels, datasets: [
-                    { label: 'GAD Padrão', data: dataGadP, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-                    { label: 'GAD Real', data: dataGadR, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-
-            // Gráfico 2: Peso Médio x Peso Padrão
-            if(chartPM2) chartPM2.destroy();
-            chartPM2 = new Chart(document.getElementById('chartPeso'), { 
-                type: 'line', 
-                data: { labels, datasets: [
-                    { label: 'Peso Padrão', data: dataPesoP, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-                    { label: 'Peso Médio', data: dataPesoM, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-
-            // Gráfico 3: % Acima do Peso (Geral)
-            if(chartPM3) chartPM3.destroy();
-            chartPM3 = new Chart(document.getElementById('chartAcimaPeso'), { 
-                type: 'line', 
-                data: { labels, datasets: [
-                    { label: '% Acima do Peso (Geral)', data: dataAcima, borderColor: '#8a2be2', backgroundColor: 'rgba(138, 43, 226, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-
-            // Gráfico 4: Uniformidade (UNI)
-            if(chartPM4) chartPM4.destroy();
-            chartPM4 = new Chart(document.getElementById('chartUni'), { 
-                type: 'line', 
-                data: { labels, datasets: [
-                    { label: 'Uniformidade', data: dataUni, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-        }
-
-        // Dashboard Real x Meta Lógica de Construção
-        function updateDashboardRealMeta() {
-            if(dbRealMeta.length === 0) {
-                document.getElementById('dashboardEmptyState').style.display = 'flex';
-                document.getElementById('dashRealMeta').style.display = 'none';
-                return;
-            }
-            document.getElementById('dashboardEmptyState').style.display = 'none';
-            document.getElementById('dashRealMeta').style.display = 'grid';
-
-            const ag = {};
-            dbRealMeta.forEach(d => {
-                let wk = parseInt(d.rm_semana);
-                if(isNaN(wk)) return;
-                
-                if(!ag[wk]) {
-                    ag[wk] = {
-                        pesoMeta: [], pesoReal: [],
-                        aprovMeta: [], aprovReal: [],
-                        mxfIdeal: [], mxfMaximo: [], mxfReal: []
-                    };
-                }
-
-                let pM = Number(d.rm_peso_meta); if(pM > 0) ag[wk].pesoMeta.push(pM);
-                let pR = Number(d.rm_peso_real); if(pR > 0) ag[wk].pesoReal.push(pR);
-                let aM = Number(d.rm_aprov_meta); if(aM > 0) ag[wk].aprovMeta.push(aM);
-                let aR = Number(d.rm_aprov_real); if(aR > 0) ag[wk].aprovReal.push(aR);
-                let iD = Number(d.rm_mxf_ideal); if(iD > 0) ag[wk].mxfIdeal.push(iD);
-                let mx = Number(d.rm_mxf_maximo); if(mx > 0) ag[wk].mxfMaximo.push(mx);
-                let rL = Number(d.rm_mxf_real); if(rL > 0) ag[wk].mxfReal.push(rL);
-            });
-
-            const weeks = Object.keys(ag).map(Number).sort((a,b)=>a-b);
-            const labels = weeks.map(w => String(w));
-
-            const avgArr = (arr) => arr.length > 0 ? parseFloat((arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2)) : 0;
-
-            const dataPesoMeta = weeks.map(w => avgArr(ag[w].pesoMeta));
-            const dataPesoReal = weeks.map(w => avgArr(ag[w].pesoReal));
-
-            const dataAprovMeta = weeks.map(w => avgArr(ag[w].aprovMeta));
-            const dataAprovReal = weeks.map(w => avgArr(ag[w].aprovReal));
-
-            const dataMxfIdeal = weeks.map(w => avgArr(ag[w].mxfIdeal));
-            const dataMxfMaximo = weeks.map(w => avgArr(ag[w].mxfMaximo));
-            const dataMxfReal = weeks.map(w => avgArr(ag[w].mxfReal));
-
-            const commonOptions = { 
-                responsive: true, maintainAspectRatio: false, color: '#ccc', 
-                scales: { x: { ticks: { color: '#888' }, grid: { color: '#333' } }, y: { ticks: { color: '#888' }, grid: { color: '#333' } } }, 
-                plugins: { legend: { labels: { color: '#ccc' } } } 
-            };
-
-            // Gráfico 1: Peso Ovo (Meta: Bar, Real: Line)
-            if(chartRM1) chartRM1.destroy();
-            chartRM1 = new Chart(document.getElementById('chartRM1'), { 
-                type: 'bar', 
-                data: { labels, datasets: [
-                    { type: 'bar', label: 'Meta', data: dataPesoMeta, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: '#3b82f6', borderWidth: 1 },
-                    { type: 'line', label: 'Real', data: dataPesoReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-
-            // Gráfico 2: Aproveitamento (Meta: Bar, Real: Line)
-            if(chartRM2) chartRM2.destroy();
-            chartRM2 = new Chart(document.getElementById('chartRM2'), { 
-                type: 'bar', 
-                data: { labels, datasets: [
-                    { type: 'bar', label: 'Meta', data: dataAprovMeta, backgroundColor: 'rgba(255, 140, 0, 0.7)', borderColor: '#ff8c00', borderWidth: 1 },
-                    { type: 'line', label: 'Real', data: dataAprovReal, borderColor: '#e6193b', backgroundColor: 'rgba(230, 25, 59, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-
-            // Gráfico 3: Macho x Fêmea (Ideal x Máximo x Real - Todas Linhas)
-            if(chartRM3) chartRM3.destroy();
-            chartRM3 = new Chart(document.getElementById('chartRM3'), { 
-                type: 'line', 
-                data: { labels, datasets: [
-                    { label: 'Ideal', data: dataMxfIdeal, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-                    { label: 'Máximo', data: dataMxfMaximo, borderColor: '#ff8c00', backgroundColor: 'rgba(255, 140, 0, 0.1)', fill: true, tension: 0.3 },
-                    { label: 'Real', data: dataMxfReal, borderColor: '#1db954', backgroundColor: 'rgba(29, 185, 84, 0.1)', fill: true, tension: 0.3 }
-                ] }, 
-                options: commonOptions 
-            });
-        }
-
         // Dashboard Fertilidade Lógica de Construção
         function updateDashboardFertilidade() {
-            if(dbFertilidade.length === 0) {
+            populateFilters(dbFertilidade, {tecnico: true, ano: false, mes: false, semana: false, aviario: false, idade: true, fxmatriz: true});
+            
+            let filteredDb = filterDataGeneric(dbFertilidade);
+
+            if(filteredDb.length === 0) {
                 document.getElementById('dashboardEmptyState').style.display = 'flex';
                 document.getElementById('dashFertilidade').style.display = 'none';
                 return;
@@ -2817,7 +2989,7 @@
 
             const ag = {};
             // Agrupando por Idade (conforme solicitado)
-            dbFertilidade.forEach(d => {
+            filteredDb.forEach(d => {
                 let idade = parseInt(d.ft_idade);
                 if(isNaN(idade)) return;
                 
